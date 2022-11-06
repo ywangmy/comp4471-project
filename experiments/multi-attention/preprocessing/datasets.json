@@ -1,0 +1,4 @@
+{"ff": [
+    {"video_path":"../my_video/v1.mp4", "imgs_path":"../my_img/v1", "id": ["v11, v12"]},
+    {"video_path":"../my_video/v2.mp4", "imgs_path":"../my_img/v2", "id": ["v21, v22"]}
+]}

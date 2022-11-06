@@ -1,0 +1,11 @@
+**/*~
+**/*~undo-tree~
+**/*#*
+**/.DS_Store
+<<<<<<< HEAD
+=======
+**/__pycache__
+**/*.pth
+**/*.pkl
+**/*.mp4
+>>>>>>> 8be6ea2 (multi-attention repo Sun Nov  6 21:53:32 HKT 2022)
