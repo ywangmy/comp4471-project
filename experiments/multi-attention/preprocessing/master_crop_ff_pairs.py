@@ -16,13 +16,13 @@ class job:
     def __init__(self):
         with open('datasets.json') as f:
             data=json.load(f)['ff']
-        data_=data
+        data_=[]
         for i in data:
             print(f'DEBUG: i={i}')
-            if 'Deepfakes' in i['imgs_path']:
-                data_.append(i)
-                data_.append(rep(i,'c23'))
-                data_.append(rep(i,'c40'))
+            #if 'Deepfakes' in i['imgs_path']:
+            data_.append(i)
+            data_.append(rep(i,'c23'))
+            data_.append(rep(i,'c40'))
         with open('FF-checked.pkl','rb') as f:
             models=pickle.load(f)
         gts={i['id'][1][:3]:i['gt'] for i in models}
