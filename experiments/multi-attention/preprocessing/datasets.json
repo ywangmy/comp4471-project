@@ -1,4 +1,5 @@
 {"ff": [
-    {"video_path":"../my_video/v1.mp4", "imgs_path":"../my_img/v1", "id": ["v11, v12"]},
-    {"video_path":"../my_video/v2.mp4", "imgs_path":"../my_img/v2", "id": ["v21, v22"]}
+    {"video_path":"my_video/v1.mp4", "imgs_path":"my_img/v1", "id": ["v101", "v102"]},
+    {"video_path":"my_video/v2.mp4", "imgs_path":"my_img/v2", "id": ["v201", "v202"]},
+    {"video_path":"my_video/v3.mp4", "imgs_path":"my_img/v3", "id": ["v301", "v302"]}
 ]}

@@ -16,8 +16,9 @@ class job:
     def __init__(self):
         with open('datasets.json') as f:
             data=json.load(f)['ff']
-        data_=[]
+        data_=data
         for i in data:
+            print(f'DEBUG: i={i}')
             if 'Deepfakes' in i['imgs_path']:
                 data_.append(i)
                 data_.append(rep(i,'c23'))
@@ -27,8 +28,10 @@ class job:
         gts={i['id'][1][:3]:i['gt'] for i in models}
         dd=[]
         for (num,i) in enumerate(data_):
+            print(f'DEBUG: i[\'id\']=', i['id'])
             para={'input_file':i['video_path'],'aligned_output_dir':i['imgs_path'],'aligned_image_size':384,'zoom_in':1,'gt':gts[i['id'][1][:3]]}
             dd.append([{'para':para,'num':num},{'id':'0','gt':''}])
+            print(f'DEBUG: para={para}')
         self.dd=dd
         self.all=len(dd)
         self.sent=0

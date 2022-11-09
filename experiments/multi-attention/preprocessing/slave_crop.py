@@ -1,4 +1,5 @@
 from face_utils import FaceDetector, norm_crop
+import ssl
 import os
 import sys
 import itertools
@@ -10,6 +11,7 @@ import requests
 import numpy as np
 from PIL import Image
 import multiprocessing
+
 def crop_aligned(img,landmarks,aligned_image_size,zoom_in):
     aligned = norm_crop(img, landmarks, aligned_image_size,zoom_in)
     aligned = Image.fromarray(aligned[:, :, ::-1])
@@ -65,15 +67,16 @@ def subworker(i):
     return {'num':i['num'],'gt':extract_face(**i['para'])}
 
 def worker(target,threads,num_batch=100):
+    proxies = {'https': target}
     pool=multiprocessing.Pool(threads)
     while True:
-        r=requests.get(target,params={'num':str(num_batch)})
+        r=requests.get(target,params={'num':str(num_batch)}, verify=False, proxies=proxies)
         data=pickle.loads(r.content)
         if not data:
             pool.close()
             return
         q=pool.map(subworker,data)
-        requests.post(target,data=pickle.dumps(q))
+        requests.post(target,data=pickle.dumps(q), verify=False, proxies=proxies)
 
 if __name__=="__main__":
     #torch.multiprocessing.set_start_method('spawn',force=True)
