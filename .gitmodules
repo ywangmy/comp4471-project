@@ -1,0 +1,3 @@
+[submodule "experiments/face-alignment"]
+	path = experiments/face-alignment
+	url = git@github.com:ywangmy/face-alignment.git
