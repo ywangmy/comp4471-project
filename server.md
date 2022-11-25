@@ -12,7 +12,6 @@
 - Store your files here
   ```bash
   cd /localdata
-  mkdir <your_own_folder>
   ```
 - Do this **every time** you log in the server
   ```bash
@@ -42,6 +41,18 @@ Copy (large) files using `scp`:
   scp <username>@<server>:/path/to/destination /path/to/source
   ```
 
+Edit file using:
+
+- `nano <file>`: see the prompt at the bottom
+  - Navigate: Ctrl-n (next line), Ctrl-p (previous line), Ctrl-b (move backward),
+    Ctrl-f (move forward), Ctrl-a (jump to the beginning of the line), Ctrl-e
+    (jump to the end)
+  - Save and exit: Ctrl-o (write out), press Enter to confirm the file name,
+    Ctrl-x (exit)
+- `emacs <file>`:
+  - exit by Ctrl-x Ctrl-c
+- `vi <file>` or `vim <file>`
+
 # Python Packages
 
 Need to use `--user` flag with `pip install`
@@ -58,4 +69,7 @@ Need to use `--user` flag with `pip install`
   ```bash
   python-csd-3.10 -m pip list --format=freeze > requirements.txt
   ```
-
+- add a directory to PATH
+  ```bash
+  bash -c "export PATH=<directory>:$PATH"
+  ```
