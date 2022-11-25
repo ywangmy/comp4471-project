@@ -26,7 +26,7 @@ P.S. In case the storage (of `/localdata`) is running out
   ```
 - Switch to `/data`: replace all the `/localdata` above by `/data`
 
-Copy (large) files using `scp`:
+## Copying (large) files using `scp`
 
 - Basic syntax
   ```bash
@@ -41,7 +41,7 @@ Copy (large) files using `scp`:
   scp <username>@<server>:/path/to/destination /path/to/source
   ```
 
-Edit file using:
+## Editting files
 
 - `nano <file>`: see the prompt at the bottom
   - Navigate: Ctrl-n (next line), Ctrl-p (previous line), Ctrl-b (move backward),
@@ -52,6 +52,31 @@ Edit file using:
 - `emacs <file>`:
   - exit by Ctrl-x Ctrl-c
 - `vi <file>` or `vim <file>`
+
+## Tmux
+
+https://tmuxcheatsheet.com
+
+With programs running in a tmux session, you can disconnect from the server and get
+it back later
+
+- new session
+  ```bash
+  tmux new -t <session-name>
+  ```
+- detach from session: Ctrl-b d
+- list sessions
+  ```bash
+  tmux ls
+  ```
+- attach session
+  ```bash
+  tmux a -t <session-name>
+  ```
+- delete/kill session
+  ```bash
+  tmux kill-session -t <session-name>
+  ```
 
 # Python Packages
 
