@@ -52,7 +52,7 @@ def main():
     args = parser.parse_args()
 
     real_paths = get_real_video_paths(args.video_dir)
-    find_face_regions(real_paths[:2], args.video_dir, args.detector)
+    find_face_regions(real_paths, args.video_dir, args.detector)
 
 if __name__ == '__main__':
     main()
