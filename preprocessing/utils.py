@@ -32,3 +32,15 @@ def get_real_video_paths(video_dir, basename=False):
     real_names = list(real_names)
     print(f'\# of real videos: {len(real_paths)}')
     return real_names if basename else real_paths
+
+def get_real_with_fakes(video_dir):
+    pairs = []
+    for json_path in glob(os.path.join(video_dir, "*/metadata.json")):
+        with open(json_path, "r") as f:
+            metadata = json.load(f)
+        for k, v in metadata.items():
+            original = v.get("original", None)
+            if v["label"] == "FAKE":
+                pairs.append((original[:-4], k[:-4] ))
+
+    return pairs
