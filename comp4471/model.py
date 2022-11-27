@@ -2,6 +2,7 @@ import torch
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
+from MAT import MultiHeadAttention
 
 def get_pretrained(num_classes = 1000):
     # https://pytorch.org/vision/stable/models/generated/torchvision.models.efficientnet_v2_s.html#torchvision.models.efficientnet_v2_s
@@ -24,7 +25,7 @@ class ASRID(nn.Module):
     def __init__(self):
         super().__init__()
         self.efficientNet = get_pretrained()
-        self.MAT = None
+        self.MAT = MultiHeadAttention(num_heads,input_size)
         self.static = None
         self.dynamic = MatNorm() # baseline
 
