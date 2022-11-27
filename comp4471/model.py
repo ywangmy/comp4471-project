@@ -9,10 +9,6 @@ def get_pretrained(num_classes = 1000):
     # efficientNet = torchvision.models.efficientnet_v2_l(weights='DEFAULT', progress=True, num_classes=num_classes) # 455M, 118M params for 1000 classes
     return efficientNet
 
-class dynamicLoss(nn.Module):
-    def __init__(self):
-        pass
-
 class ASRID(nn.Module):
     def __init__(self):
         super().__init__()
