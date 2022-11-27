@@ -65,22 +65,25 @@ def main():
     print(folds)
     video_fold = {}
     for d in os.listdir(args.video_dir):
-        if "dfdc" in d:
-            part = int(d.split("_")[-1])
-            for f in os.listdir(os.path.join(args.video_dir, d)):
-                if "metadata.json" in f:
-                    with open(os.path.join(args.video_dir, d, "metadata.json")) as metadata_json:
-                        metadata = json.load(metadata_json)
+        if not os.path.isdir(os.path.join(args.video_dir, d)):
+            continue
+        if not "dfdc" in d:
+            continue
+        part = int(d.split("_")[-1])
+        for f in os.listdir(os.path.join(args.video_dir, d)):
+            if "metadata.json" in f:
+                with open(os.path.join(args.video_dir, d, "metadata.json")) as metadata_json:
+                    metadata = json.load(metadata_json)
 
-                    for k, v in metadata.items():
-                        fold = None
-                        for i, fold_dirs in enumerate(folds):
-                            if part in fold_dirs:
-                                fold = i
-                                break
-                        assert fold is not None
-                        video_id = k[:-4]
-                        video_fold[video_id] = fold
+                for k, v in metadata.items():
+                    fold = None
+                    for i, fold_dirs in enumerate(folds):
+                        if part in fold_dirs:
+                            fold = i
+                            break
+                    assert fold is not None
+                    video_id = k[:-4]
+                    video_fold[video_id] = fold
     for fold in range(len(folds)):
         holdoutset = {k for k, v in video_fold.items() if v == fold}
         trainset = {k for k, v in video_fold.items() if v != fold}
