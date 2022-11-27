@@ -1,7 +1,7 @@
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-from albu import IsotropicResize
+from .albu import IsotropicResize
 
 def create_transforms_train(size=300):
     return A.Compose(
