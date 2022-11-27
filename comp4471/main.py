@@ -15,6 +15,7 @@ import torch.distributed as dist
 from config import load_config
 from datasets.augment import create_transforms_train, create_transforms_val
 
+
 def my_parse_args():
     parser = argparse.ArgumentParser("Hello")
     parser.add_argument('--config', metavar='CONFIG_FILE', help='path to configuration file')
@@ -27,12 +28,7 @@ def my_parse_args():
     parser.add_argument('--logdir', type=str, default='logs')
     return parser.parse_args()
 
-def train_epoch(loader):
-    pass
-
-def validate_epoch():
-    pass
-
+from train import train_epoch, validate_epoch
 def train_loop(start_epoch, num_epoch, sampler, loader_train, loader_val):
     for epoch in range(num_epochs):
         #if is_distributed:
@@ -89,7 +85,7 @@ def main():
 
     # Configure data
     configure_data(args, config)
-    
+
     # Train loop
     start_epoch = 0
     # Resume
