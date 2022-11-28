@@ -3,21 +3,21 @@ import json
 DEFAULTS = {
     "network": "dpn",
     "encoder": "dpn92",
+    "seed": 4471,
     "model_params": {},
     "optimizer": {
         "batch_size": 32,
         "type": "SGD",  # supported: SGD, Adam
         "momentum": 0.9,
-        "weight_decay": 0,
+        "weight_decay": 0.005,
         "clip": 1.,
         "learning_rate": 0.1,
         "classifier_lr": -1,
-        "nesterov": True,
+        #"nesterov": True,
         "schedule": {
             "type": "constant",  # supported: constant, step, multistep, exponential, linear, poly
             "mode": "epoch",  # supported: epoch, step
             "epochs": 10,
-            "params": {}
         }
     },
     "normalize": {

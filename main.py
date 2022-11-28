@@ -46,16 +46,17 @@ def main():
 
     # Resume
     lr = config['optimizer']['schedule']['lr']
-    num_epochs = config['optimizer']['schedule']['epochs']
+    num_epoch = config['optimizer']['schedule']['epochs']
+    weight_delay= config['optimizer']['schedule']['weight_delay']
 
-    optimizer1 = torch.optim.Adam(params=[model.MAT.parameters(), model.static.parameters()], lr=lr, weight_decay=0)
+    optimizer1 = torch.optim.Adam(params=[model.MAT.parameters(), model.static.parameters()], lr=lr, weight_decay=weight_delay)
     comp4471.train.train_loop(model = model, num_epoch=num_epoch, sampler=sampler_train,
             loader_train=loader_train, loader_val=loader_val,
             optimizer=optimizer1,
             loss_func=comp4471.loss.twoPhaseLoss(phase=1).to(device), eval_func=evalLoss().to(device),
             device=device,
             phase=1)
-    optimizer2 = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=0)
+    optimizer2 = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=weight_delay)
     comp4471.train.train_loop(model = model, num_epoch=num_epoch - num_epoch / 2, sampler=sampler_train,
             loader_train=loader_train, loader_val=loader_val,
             optimizer=optimizer2,
