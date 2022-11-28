@@ -13,7 +13,7 @@ class ScaledDotProduct(nn.Module):
     def forward(self, query, key, value, mask=None, dropout=None):
         scores=torch.matmul(query,key.transpose(-2,-1))/self.sqrt_dim
         if mask!=None: scores.masked_fill_(mask.view(scores.size()), -float('Inf'))
-        if dropout==None: attn_output_weights=dropout(attn_output_weights)
+        if dropout!=None: attn_output_weights=dropout(attn_output_weights)
         attn_output_weights=F.softmax(scores,dim=-1)
         attn_output=torch.matmul(attn_output_weights,value)
         return attn_output, attn_output_weights
