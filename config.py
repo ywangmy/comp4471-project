@@ -1,29 +1,30 @@
 import json
 
 DEFAULTS = {
-    "network": "dpn",
-    "encoder": "dpn92",
+    #"network": "dpn",
+    #"encoder": "dpn92",
+    "size": 380,
     "seed": 4471,
-    "model_params": {},
+    #"model_params": {},
     "optimizer": {
         "batch_size": 32,
-        "type": "SGD",  # supported: SGD, Adam
-        "momentum": 0.9,
+        #"type": "SGD",  # supported: SGD, Adam
+        #"momentum": 0.9,
         "weight_decay": 0.005,
-        "clip": 1.,
+        #"clip": 1.,
         "learning_rate": 0.1,
-        "classifier_lr": -1,
+        #"classifier_lr": -1,
         #"nesterov": True,
         "schedule": {
-            "type": "constant",  # supported: constant, step, multistep, exponential, linear, poly
-            "mode": "epoch",  # supported: epoch, step
+            #"type": "constant",  # supported: constant, step, multistep, exponential, linear, poly
+            #"mode": "epoch",  # supported: epoch, step
             "epochs": 10,
         }
     },
-    "normalize": {
-        "mean": [0.485, 0.456, 0.406],
-        "std": [0.229, 0.224, 0.225]
-    }
+    #"normalize": {
+    #    "mean": [0.485, 0.456, 0.406],
+    #    "std": [0.229, 0.224, 0.225]
+    #}
 }
 
 

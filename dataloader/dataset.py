@@ -4,7 +4,7 @@ import pandas as pd
 
 import torch
 from torch.utils.data import Dataset
-from augment import create_transforms_totensor
+from .augment import create_transforms_totensor
 
 class DfdcDataset(Dataset):
 
@@ -28,7 +28,7 @@ class DfdcDataset(Dataset):
         folds_csv = self.folds_csv
         if self.mode == 'train':
             rows = df[df["fold"] != self.fold]
-        else if self.mode == 'val':
+        elif self.mode == 'val':
             rows = df[df["fold"] == self.fold]
         self.data = rows.value
         #np.random.seed(seed)

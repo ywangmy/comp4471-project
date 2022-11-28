@@ -1,6 +1,6 @@
 import torch
-from dataset import DfdcDataset
-from augment import create_transforms_train, create_transforms_val
+from .dataset import DfdcDataset
+from .augment import create_transforms_train, create_transforms_val
 
 # https://pytorch.org/docs/stable/data.html
 def configure_data(args, config):

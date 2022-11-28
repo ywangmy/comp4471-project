@@ -9,14 +9,13 @@ import cv2
 import torch
 from torch.backends import cudnn
 from torch.nn import DataParallel
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 import torch.distributed as dist
 from torch.utils.tensorboard import SummaryWriter
 
 import comp4471
-import config
-import dataloader
+from config import load_config
+from dataloader.loader import configure_data
 
 
 def my_parse_args():
@@ -33,10 +32,10 @@ def my_parse_args():
 
 def main():
     args = my_parse_args()
-    config = config.load_config(args.config)
+    config = load_config(args.config)
 
     # Configure data
-    sampler_train, loader_train, loader_val = dataloader.configure_data(args, config)
+    sampler_train, loader_train, loader_val = configure_data(args, config)
 
     # Train loop
     start_epoch = 0
