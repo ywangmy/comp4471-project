@@ -27,7 +27,7 @@ class DfdcDataset(Dataset):
         folds_csv = self.folds_csv
         if self.mode == 'train':
             rows = df[df["fold"] != self.fold]
-        else:
+        else if self.mode == 'val':
             rows = df[df["fold"] == self.fold]
         self.data = rows.value
         np.random.seed(seed)
