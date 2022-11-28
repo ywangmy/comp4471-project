@@ -43,7 +43,7 @@ class SelfAttention(nn.Module):
     def __init__(self, batch_size, num_frames, num_features, num_heads, embed_dim, **kwargs):
         super(SelfAttention, self).__init__()
         self.batch_size = batch_size
-        self.num_frames = num_frame
+        self.num_frames = num_frames
         self.num_features = num_features
         self.embed_dim = embed_dim
         self.num_heads = num_heads
