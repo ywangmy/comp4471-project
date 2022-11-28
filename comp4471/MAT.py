@@ -12,10 +12,8 @@ class ScaledDotProduct(nn.Module):
         self.sqrt_dim=np.sqrt(input_size)
     def forward(self, query, key, value, mask=None, dropout=None):
         scores=torch.matmul(query,key.transpose(-2,-1))/self.sqrt_dim
-        if mask==None: pass 
-
-        if dropout==None: pass
-        
+        if mask!=None: scores.masked_fill_(mask.view(scores.size()), -float('Inf'))
+        if dropout==None: attn_output_weights=dropout(attn_output_weights)
         attn_output_weights=F.softmax(scores,dim=-1)
         attn_output=torch.matmul(attn_output_weights,value)
         return attn_output, attn_output_weights
@@ -30,8 +28,7 @@ class MultiHeadAttention(nn.Module):
         self.scaled_dot_attn = ScaledDotProduct(self.input_size)
 
     def forward(self, query, key, value, mask=None):
-        if mask==None:pass 
-        
+        if mask!=None: mask = mask.unsqueeze(1).repeat(1, self.num_heads, 1, 1)
         num_batches=query.size(0)
         query, key, value = [l(x).view(num_batches, -1, self.num_heads, self.input_size).transpose(1, 2)
              for l, x in zip(self.linears, (query, key, value))]
