@@ -36,7 +36,7 @@ def main():
     config = config.load_config(args.config)
 
     # Configure data
-    sampler_train, sampler_val, loader_train, loader_val = dataloader.configure_data(args, config)
+    sampler_train, loader_train, loader_val = dataloader.configure_data(args, config)
 
     # Train loop
     start_epoch = 0
