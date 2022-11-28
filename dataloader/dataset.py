@@ -10,8 +10,8 @@ class DfdcDataset(Dataset):
 
     def __init__(self,
                  mode,
-                 root_dir,
-                 crops_dir="crops",
+                 root_dir="data/",
+                 crops_dir='crops',
                  fold=0,
                  folds_csv_path="folds.csv",
                  trans=None):
@@ -19,19 +19,21 @@ class DfdcDataset(Dataset):
         self.root_dir = root_dir
         self.crops_dir = crops_dir
         self.fold = fold
+        self.folds_csv_path = folds_csv_path
         self.folds_csv = pd.read_csv(self.folds_csv_path)
         self.mode = mode
         self.trans = trans
         self.trans_totensor = create_transforms_totensor()
 
     def next_epoch(self):
+        # k fold
         folds_csv = self.folds_csv
         if self.mode == 'train':
-            rows = df[df["fold"] != self.fold]
+            rows = folds_csv[folds_csv["fold"] != self.fold]
         elif self.mode == 'val':
-            rows = df[df["fold"] == self.fold]
+            rows = folds_csv[folds_csv["fold"] == self.fold]
+
         self.data = rows.value
-        #np.random.seed(seed)
         np.random.shuffle(self.data)
         self.epoch += 1
 

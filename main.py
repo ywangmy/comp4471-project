@@ -17,20 +17,23 @@ import comp4471
 from config import load_config
 from dataloader.loader import configure_data
 
-
 def my_parse_args():
     parser = argparse.ArgumentParser("ASRID")
     parser.add_argument('--config', metavar='CONFIG_FILE', help='path to configuration file')
     parser.add_argument('--workers', type=int, default=6, help='number of cpu threads to use')
     parser.add_argument('--fold', type=int, default=0)
-    parser.add_argument('--data-dir', type=str, default="data/")
-    parser.add_argument('--folds-csv', type=str, default='folds.csv')
+    parser.add_argument('--root-dir', type=str, default="data/")
+    parser.add_argument('--folds-csv-path', type=str, default='folds.csv')
     parser.add_argument('--crops-dir', type=str, default='crops')
     parser.add_argument('--output-dir', type=str, default='weights/')
     parser.add_argument('--logdir', type=str, default='logs')
     return parser.parse_args()
 
 def main():
+    local_rank = int(os.environ["LOCAL_RANK"])
+    # dist.init_process_group(backend="nccl")
+    dist.init_process_group(backend='nccl', init_method='tcp://127.0.0.1:6666', world_size=1, rank=local_rank)
+
     args = my_parse_args()
     config = load_config(args.config)
 
@@ -44,7 +47,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load classifier into model
-    model = comp4471.model.ASRID().to(device)
+    model = comp4471.model.ASRID(batch_size=config['optimizer']['batch_size']).to(device)
 
     # Resume
     lr = config['optimizer']['schedule']['lr']

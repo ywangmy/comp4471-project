@@ -10,21 +10,22 @@ def configure_data(args, config):
 
     # Map-style dataset
     data_train = DfdcDataset(mode='train',
-                             root_dir=None,
-                             crops_dir=None,
-                             fold=None,
-                             folds_csv_path=None,
-                             trans=None)
+                             root_dir=args.root_dir,
+                             crops_dir=args.crops_dir,
+                             fold=args.fold,
+                             folds_csv_path=args.folds_csv_path,
+                             trans=trans_train)
     data_val = DfdcDataset(mode='val',
-                           root_dir=None,
-                           crops_dir=None,
-                           fold=None,
-                           folds_csv_path=None,
-                           trans=None)
+                             root_dir=args.root_dir,
+                             crops_dir=args.crops_dir,
+                             fold=args.fold,
+                             folds_csv_path=args.folds_csv_path,
+                             trans=trans_val)
 
     # Customized sampler
     # https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel
     # https://pytorch.org/docs/stable/distributed.html#distributed-launch
+    # https://pytorch.org/tutorials/beginner/dist_overview.html#data-parallel-training
     sampler_train = torch.utils.data.distributed.DistributedSampler(data_train)
     sampler_val = torch.utils.data.distributed.DistributedSampler(data_val)
 
