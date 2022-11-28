@@ -24,13 +24,14 @@ class staticLoss(nn.Module):
         return sum
 
 class twoPhaseLoss(nn.Module):
-    def __init__(self, W_dynamic = 1.):
+    def __init__(self, phase, W_dynamic = 1.):
         self.static_loss = staticLoss()
         self.dynamic_loss = dynamicLoss()
+        self.phase = phase
         self.W_dynamic = W_dynamic
 
-    def forward(self, phase, pred, y)
-        if phase == 1:
+    def forward(self, pred, y)
+        if self.phase == 1:
             return self.static_loss(pred, y)
         else:
             return self.static_loss(pred, y) # + self.dynamic_loss() * self.W_dynamic

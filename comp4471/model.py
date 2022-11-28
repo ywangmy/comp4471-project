@@ -21,12 +21,18 @@ class MatNorm(nn.Module):
         x = torch.mean(x, dim=1)
         return x
 
+class staticClassifier(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x):
+        return x
+
 class ASRID(nn.Module):
     def __init__(self):
         super().__init__()
         self.efficientNet = get_pretrained()
         self.MAT = MultiHeadAttention(num_heads,input_size)
-        self.static = None
+        self.static = staticClassifier()
         self.dynamic = MatNorm() # baseline
 
         # self.w_static = torch.rand((1,))
