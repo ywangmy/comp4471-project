@@ -18,7 +18,7 @@ import comp4471
 import config
 import dataloader
 
-# python -m main.py --config conf.json
+
 def my_parse_args():
     parser = argparse.ArgumentParser("ASRID")
     parser.add_argument('--config', metavar='CONFIG_FILE', help='path to configuration file')
