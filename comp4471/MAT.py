@@ -37,5 +37,36 @@ class MultiHeadAttention(nn.Module):
         x=x.transpos(1,2).contiguous().view(num_batches,-1,n)
         return self.linears[-1](x)
 
+class SelfAttention(nn.Module):
 
+    # (N, F, num_features, num_heads)
+    def __init__(self, batch_size, num_frames, num_features, num_heads, embed_dim, **kwargs):
+        super(SelfAttention, self).__init__()
+        self.batch_size = batch_size
+        self.num_frames = num_frame
+        self.num_features = num_features
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        
+        self.attn_block = nn.MultiheadAttention(embed_dim=self.embed_dim, num_head=self.num_heads)
+        self.fc_query = nn.Linear(self.num_features, self.attn_block.embed_dim, bias=False)
+        self.fc_key = nn.Linear(self.num_features, self.attn_block.kdim, bias=False)
+        self.fc_value = nn.Linear(self.num_features, self.attn_block.vdim, bias=False)        
+
+        self.relu = F.relu
+        
+    def forward(self, x):
+        """
+        Input:
+        - x (N, D): feature output
+        Outpur:
+        - attn_output: Attention output
+        - attn_output_weights: Attention weights
+        """
+        query = self.fc_query(x)
+        key = self.fc_key(x)
+        value = self.fc_value(x)
+        attn_output, attn_output_weights = self.attn_block(query, key, value)
+        attn_output = self.relu(attn_output)
+        return attn_output, attn_output_weights
     
