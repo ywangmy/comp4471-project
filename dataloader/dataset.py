@@ -30,7 +30,7 @@ class DfdcDataset(Dataset):
         else:
             rows = df[df["fold"] == self.fold]
         self.data = rows.value
-        np.random.seed(seed)
+        #np.random.seed(seed)
         np.random.shuffle(self.data)
         self.epoch += 1
 
