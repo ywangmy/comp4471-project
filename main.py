@@ -57,7 +57,7 @@ def main():
      torch.cuda.manual_seed_all(seed)
      np.random.seed(seed)
      random.seed(seed)
-     torch.backends.cudnn.deterministic = True
+     #torch.backends.cudnn.deterministic = True
 
     optimizer1 = torch.optim.Adam(params=[model.MAT.parameters(), model.static.parameters()], lr=lr, weight_decay=weight_delay)
     comp4471.train.train_loop(model = model, num_epoch=num_epoch, sampler=sampler_train,
