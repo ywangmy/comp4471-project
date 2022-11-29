@@ -24,6 +24,7 @@ class DfdcDataset(Dataset):
         self.mode = mode
         self.trans = trans
         self.trans_totensor = create_transforms_totensor()
+        self.epoch=0
         self.next_epoch()
 
     def next_epoch(self):
@@ -34,7 +35,7 @@ class DfdcDataset(Dataset):
         elif self.mode == 'val':
             rows = folds_csv[folds_csv["fold"] == self.fold]
 
-        self.data = rows.value
+        self.data = rows.values
         np.random.shuffle(self.data)
         self.epoch += 1
 
@@ -45,7 +46,6 @@ class DfdcDataset(Dataset):
                 img_path = os.path.join(self.root_dir, self.crops_dir, video, img_file)
                 image = cv2.imread(img_path, cv2.IMREAD_COLOR)
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                image = Nonw
                 if self.trans is not None:
                     results = self.trans(image=image)
                     image, mask = results['image'], results['mask']

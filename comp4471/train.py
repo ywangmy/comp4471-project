@@ -46,9 +46,9 @@ def train_loop(model, num_epoch, sampler_train, loader_train, loader_val, optimi
     for epoch in range(num_epochs):
         if verbose:
             print(f'epoch {start_epoch + epoch} in progress')
-        #if is_distributed:
-        sampler_train.set_epoch(epoch)
-        sampler_train.dataset.next_epoch()
+        if sampler_train is not None:
+            sampler_train.set_epoch(epoch)
+            sampler_train.dataset.next_epoch()
         train_epoch(model, device, loader_train, optimizer, loss_func, kwargs)
         lr_scheduler.step()
         if epoch % val_freq == 0:
