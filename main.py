@@ -13,8 +13,9 @@ from tqdm import tqdm
 import torch.distributed as dist
 from torch.utils.tensorboard import SummaryWriter
 
-import comp4471
+from comp4471 import loss
 from comp4471.model import ASRID
+from comp4471.train import train_loop
 from config import load_config
 from dataloader.loader import configure_data
 
@@ -73,21 +74,22 @@ def main():
     num_epoch = config['optimizer']['schedule']['epochs']
     weight_delay= config['optimizer']['weight_decay']
 
-
-
-    optimizer1 = torch.optim.Adam(params=[model.multiattn_block.parameters(), model.static_block.parameters()], lr=lr, weight_decay=weight_delay)
-    comp4471.train.train_loop(
-        model = model, num_epoch=num_epoch, device=device, writer=writer
+    optimizer1 = torch.optim.Adam([
+        {'params': model.multiattn_block.parameters()},
+        {'params': model.static_block.parameters()}
+    ], lr=lr, weight_decay=weight_delay)
+    train_loop(
+        model = model, num_epoch=num_epoch, device=device, writer=writer,
         sampler=sampler_train, loader_train=loader_train, loader_val=loader_val,
-        optimizer=optimizer1, loss_func=comp4471.loss.twoPhaseLoss(phase=1).to(device), eval_func=comp4471.loss.evalLoss().to(device),
+        optimizer=optimizer1, loss_func=loss.twoPhaseLoss(phase=1).to(device), eval_func=loss.evalLoss().to(device),
         start_epoch = 0, val_freq = 2, verbose = True, phase=1,
         start_iter = 0)
 
     optimizer2 = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=weight_delay)
-    comp4471.train.train_loop(
-        model = model, num_epoch=num_epoch - num_epoch / 2, device=device, writer=writer
+    train_loop(
+        model = model, num_epoch=num_epoch - num_epoch / 2, device=device, writer=writer,
         sampler=sampler_train, loader_train=loader_train, loader_val=loader_val,
-        optimizer=optimizer2, loss_func=comp4471.loss.twoPhaseLoss(phase=2).to(device), eval_func=comp4471.loss.evalLoss().to(device),
+        optimizer=optimizer2, loss_func=loss.twoPhaseLoss(phase=2).to(device), eval_func=loss.evalLoss().to(device),
         start_epoch = 0, val_freq = 2, verbose = True, phase=2,
         start_iter = 0)
 
