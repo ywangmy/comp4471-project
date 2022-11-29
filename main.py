@@ -22,7 +22,7 @@ from dataloader.loader import configure_data
 def my_parse_args():
     parser = argparse.ArgumentParser("ASRID")
     parser.add_argument('--config', metavar='CONFIG_FILE', help='path to configuration file')
-    parser.add_argument('--is-distributed', help='is distributed', action='store_true')
+    parser.add_argument('--is-distributed', help='is distributed', action='store_true') # action-> having means True
     parser.add_argument('--workers', type=int, default=6, help='number of cpu threads to use')
     parser.add_argument('--fold', type=int, default=0)
     parser.add_argument('--root-dir', type=str, default="data/")
@@ -80,18 +80,18 @@ def main():
     ], lr=lr, weight_decay=weight_delay)
     train_loop(
         model = model, num_epoch=num_epoch, device=device, writer=writer,
-        sampler=sampler_train, loader_train=loader_train, loader_val=loader_val,
+        sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
         optimizer=optimizer1, loss_func=loss.twoPhaseLoss(phase=1).to(device), eval_func=loss.evalLoss().to(device),
-        start_epoch = 0, val_freq = 2, verbose = True, phase=1,
-        start_iter = 0)
+        start_epoch=0, phase=1,
+        start_iter=0) # kwargs
 
     optimizer2 = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=weight_delay)
     train_loop(
         model = model, num_epoch=num_epoch - num_epoch / 2, device=device, writer=writer,
-        sampler=sampler_train, loader_train=loader_train, loader_val=loader_val,
+        sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
         optimizer=optimizer2, loss_func=loss.twoPhaseLoss(phase=2).to(device), eval_func=loss.evalLoss().to(device),
-        start_epoch = 0, val_freq = 2, verbose = True, phase=2,
-        start_iter = 0)
+        start_epoch=0, phase=2,
+        start_iter=0) # kwargs
 
 if __name__ == '__main__':
     main()

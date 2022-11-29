@@ -17,7 +17,7 @@ class MatNorm(nn.Module):
     def forward(self, x):
         """
         Input:
-        - x: A feature vector (attention output), shape: (N, D)
+        - x: A feature vector (attention output), shape: (N, F, H, W)
         Output:
         - x: Dynamic score
         """
@@ -41,23 +41,23 @@ class staticClassifier(nn.Module):
         - x: Static score
         """
         fc_output = self.fc(x)
-        score = F.relu(fc_output)
+        score = F.sigmoid(fc_output)
         return score
 
 class ASRID(nn.Module):
     def __init__(self, batch_size, num_frames=1, num_features=1000, num_heads=10, dim_attn=1000):
         super().__init__()
         # Parameters setup
-        self.num_features = num_features
-        self.num_heads = num_heads
         self.batch_size = batch_size
         self.num_frames = num_frames
+        self.num_features = num_features
+        self.num_heads = num_heads
         self.dim_attn = dim_attn
-        
+
         # Blocks(/net/layer/model) setup
         self.efficientNet = get_pretrained(self.num_features)
         self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.dim_attn)
-        self.static_block = staticClassifier(self.dim_attn * self.num_heads)
+        self.static_block = staticClassifier(in_channels=self.dim_attn * self.num_heads)
         self.dynamic_block = MatNorm() # baseline
 
         # Other parameters
@@ -74,10 +74,13 @@ class ASRID(nn.Module):
         # Change x: (N, F, ...) to x: (N * F, ...)
         N, F, C, H, W = x.shape()
         x = torch.reshape(-1, C, H, W)
+
         # Feature output (N, num_features)
-        feat_output = self.efficientNet(x) 
+        feat_output = self.efficientNet(x)
+
         # Attention output (N, dim_attn * num_heads)
         attn_output = self.MAT_block(feat_output)
+
         # Static and Dynamic Block
         score_static = self.static_block(attn_output).mean(dim=1)
         score_dynamic = self.dynamic_block(attn_output)

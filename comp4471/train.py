@@ -3,6 +3,7 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torch.optim.lr_scheduler import ExponentialLR, CosineAnnealingLR
 
 #def save():
 #    torch.save(model.state_dict(), "model.pth")
@@ -21,7 +22,11 @@ def train_epoch(model, device, writer, data_loader,
     total_iter = len(data_loader)
 
     model.train()
-    for iter, (X, y) in enumerate(data_loader):
+    #for iter, (X, y) in enumerate(data_loader):
+    for iter, sample in enumerate(data_loader):
+        imgs = sample["image"].cuda()
+        labels = sample["labels"].cuda().float()
+        break
         X = X.to(device, non_blocking=True); y = y.to(device, non_blocking=True)
         score = model(X)
         loss = loss_func(score, y).mean()
@@ -50,8 +55,10 @@ def train_loop(model, num_epoch, device, writer,
             optimizer, loss_func, eval_func,
             start_epoch = 0, val_freq = 2, verbose = True, phase = 1, **kwargs):
     # https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, verbose=True)
-    for epoch in range(num_epochs):
+    # lr_scheduler = CosineAnnealingLR(optimizer, verbose=True)
+    lr_scheduler = ExponentialLR(optimizer, gamma=0.9)
+
+    for epoch in range(num_epoch):
         if verbose:
             print(f'epoch {start_epoch + epoch} in progress')
         if sampler_train is not None:

@@ -1,6 +1,11 @@
 import os
 import numpy as np
 import pandas as pd
+import cv2
+import traceback
+import os
+import sys
+import random
 
 import torch
 from torch.utils.data import Dataset
@@ -48,16 +53,15 @@ class DfdcDataset(Dataset):
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 if self.trans is not None:
                     results = self.trans(image=image)
-                    image, mask = results['image'], results['mask']
-                img_tensor = trans_totensor(image=image)['image']
+                    image = results['image']
+                    # mask = results['mask'] # for self.mask is not None
+                img_tensor = self.trans_totensor(image=image)['image']
                 return {"image": image,
                         "labels": np.array((label,)),
-                        "img_name": os.path.join(video, img_file),
-                        "valid": valid_label,
-                        "rotations": rotation}
+                        "img_name": os.path.join(video, img_file)}
             except Exception as e:
                 traceback.print_exc(file=sys.stdout)
-                print("Broken image", os.path.join(self.data_root, self.crops_dir, video, img_file))
+                print("Broken image", os.path.join(self.root_dir, self.crops_dir, video, img_file))
                 index = random.randint(0, len(self.data) - 1)
 
     def __len__(self):
