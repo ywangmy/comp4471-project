@@ -73,6 +73,7 @@ def main():
     lr = config['optimizer']['lr']
     num_epoch = config['optimizer']['schedule']['epochs']
     weight_delay= config['optimizer']['weight_decay']
+    writer.add_hparams({'lr': lr, 'bsize': config['optimizer']['batch_size']}, {})
 
     optimizer1 = torch.optim.Adam([
         {'params': model.multiattn_block.parameters()},

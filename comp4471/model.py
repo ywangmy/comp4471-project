@@ -10,6 +10,8 @@ def get_pretrained(num_classes = 1000):
     if num_classes == 1000:
         efficientNet = torchvision.models.efficientnet_v2_s(weights='DEFAULT', progress=True) # 150MB, 20M params for 1000 classes
         # efficientNet = torchvision.models.efficientnet_v2_l(weights='DEFAULT', progress=True, num_classes=num_classes) # 455M, 118M params for 1000 classes
+        for param in efficientNet.parameters():
+            param.requires_grad = False
     else:
         efficientNet = torchvision.models.efficientnet_v2_s(num_classes=num_classes)
     return efficientNet

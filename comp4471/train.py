@@ -31,18 +31,14 @@ def train_epoch(model, device, writer, data_loader,
         X = X.to(device, non_blocking=True); y = y.to(device, non_blocking=True) # y should be float()
         score, attn_output = model(X)
 
-        print(X)
-        print(score)
-        print(y)
-
-        writer.add_images('X', X, global_step=start_iter+iter)
-        writer.flush()
-        assert 1 == 0
-
+        #writer.add_images('X', X.transpose(1,2), global_step=start_iter+iter, dataformats='CHW')
+        #writer.flush()
 
         score = score.view(-1, 1)
         loss = loss_func(score, y).mean()
         writer.add_scalar(f'Loss/train{phase}', loss, start_iter+iter)
+        for i, param_group in enumerate(optimizer.param_groups):
+            writer.add_scalar(f'Lr/lr{phase}-param{i}', param_group['lr'], start_iter+iter)
 
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
