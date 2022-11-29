@@ -25,12 +25,22 @@ def train_epoch(model, device, writer, data_loader,
     #for iter, (X, y) in enumerate(data_loader):
     for iter, sample in enumerate(data_loader):
         # X is images
-        X = sample["image"]
+        X = sample["image"].float()
         # y is labels
-        y = sample["labels"]
-        break
-        X = X.to(device, non_blocking=True); y = y.to(device, non_blocking=True) # y should be float
-        score = model(X)
+        y = sample["labels"].float()
+        X = X.to(device, non_blocking=True); y = y.to(device, non_blocking=True) # y should be float()
+        score, attn_output = model(X)
+
+        print(X)
+        print(score)
+        print(y)
+
+        writer.add_images('X', X, global_step=start_iter+iter)
+        writer.flush()
+        assert 1 == 0
+
+
+        score = score.view(-1, 1)
         loss = loss_func(score, y).mean()
         writer.add_scalar(f'Loss/train{phase}', loss, start_iter+iter)
 

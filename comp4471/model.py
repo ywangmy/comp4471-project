@@ -7,8 +7,11 @@ from .MAT import SelfAttention
 
 def get_pretrained(num_classes = 1000):
     # https://pytorch.org/vision/stable/models/generated/torchvision.models.efficientnet_v2_s.html#torchvision.models.efficientnet_v2_s
-    efficientNet = torchvision.models.efficientnet_v2_s(weights='DEFAULT', progress=True, num_classes=num_classes) # 150MB, 20M params for 1000 classes
-    # efficientNet = torchvision.models.efficientnet_v2_l(weights='DEFAULT', progress=True, num_classes=num_classes) # 455M, 118M params for 1000 classes
+    if num_classes == 1000:
+        efficientNet = torchvision.models.efficientnet_v2_s(weights='DEFAULT', progress=True) # 150MB, 20M params for 1000 classes
+        # efficientNet = torchvision.models.efficientnet_v2_l(weights='DEFAULT', progress=True, num_classes=num_classes) # 455M, 118M params for 1000 classes
+    else:
+        efficientNet = torchvision.models.efficientnet_v2_s(num_classes=num_classes)
     return efficientNet
 
 class MatNorm(nn.Module):
@@ -60,7 +63,7 @@ class ASRID(nn.Module):
         # Blocks(/net/layer/model) setup
         self.efficientNet = get_pretrained(self.num_features)
         self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.dim_attn)
-        self.static_block = staticClassifier(in_channels=self.dim_attn * self.num_heads)
+        self.static_block = staticClassifier(in_channels=self.dim_attn)
         self.dynamic_block = MatNorm() # baseline
 
         # Other parameters
@@ -75,15 +78,18 @@ class ASRID(nn.Module):
         - score (N, ): Score
         """
         # Change x: (N, F, ...) to x: (N * F, ...)
-        N, F, C, H, W = list(x.size())
-        x = torch.reshape(-1, C, H, W)
+        #N, F, C, H, W = list(x.size())
+        #print(f'x.size()={x.size()}, type={x.type()}')
+        N, C, H, W = list(x.size())
+        x = torch.reshape(x, (-1, C, H, W))
 
         # Feature output (N, num_features)
         feat_output = self.efficientNet(x)
+        #print(f'feat_output.size()={feat_output.size()}')
 
         # Attention output (N, dim_attn * num_heads)
-        attn_output = self.MAT_block(feat_output)
-
+        attn_output, attn_output_weights = self.multiattn_block(feat_output)
+        #print(f'attn_output.size()={attn_output.size()}')
         # Static (N, ) and Dynamic Block
         score_static = self.static_block(attn_output)#.mean(dim=1)
         #score_dynamic = self.dynamic_block(attn_output)

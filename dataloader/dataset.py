@@ -56,7 +56,7 @@ class DfdcDataset(Dataset):
                     image = results['image']
                     # mask = results['mask'] # for self.mask is not None
                 img_tensor = self.trans_totensor(image=image)['image']
-                return {"image": image,
+                return {"image": img_tensor,
                         "labels": np.array((label,)),
                         "img_name": os.path.join(video, img_file)}
             except Exception as e:

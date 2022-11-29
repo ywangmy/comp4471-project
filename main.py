@@ -64,7 +64,7 @@ def main():
     start_epoch = 0
 
     # Device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     # Load classifier into model
     model = ASRID(batch_size=config['optimizer']['batch_size']).to(device)
