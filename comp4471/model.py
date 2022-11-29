@@ -21,9 +21,10 @@ class MatNorm(nn.Module):
         Output:
         - x: Dynamic score
         """
-        N, F, H, W = x.shape
+        #N, F, H, W = x.shape
+        N, D = list(x.size())
         x = torch.linalg.matrix_norm(x) # https://pytorch.org/docs/stable/generated/torch.linalg.matrix_norm.html#torch.linalg.matrix_norm
-        x = torch.diff(x, dim=1) # https://pytorch.org/docs/stable/generated/torch.diff.html?highlight=diff#torch.diff
+        x = torch.diff(x, dim=0) # https://pytorch.org/docs/stable/generated/torch.diff.html?highlight=diff#torch.diff
         x = torch.abs(x)
         x = torch.mean(x, dim=1)
         return x
@@ -36,12 +37,14 @@ class staticClassifier(nn.Module):
     def forward(self, x):
         """
         Input:
-        - x: A feature vector (attention ouput), shape: (N, D)
+        - x (N, in_channels): A feature vector (attention ouput)
         Output:
-        - x: Static score
+        - score (N, out_channels=2): Static score
         """
         fc_output = self.fc(x)
-        score = F.relu(fc_output)
+        relu_output = F.relu(fc_output)
+        score = F.softmax(relu_output)
+        score = score[:, 0]
         return score
 
 class ASRID(nn.Module):
@@ -67,19 +70,19 @@ class ASRID(nn.Module):
     def forward(self, x):
         """
         Input:
-        - x (N, F, C(hannels), H, W): Raw information
+        - x (N, F(rames), C(hannels), H, W): Raw information
         Output:
         - score (N, ): Score
         """
         # Change x: (N, F, ...) to x: (N * F, ...)
-        N, F, C, H, W = x.shape()
+        N, F, C, H, W = list(x.size())
         x = torch.reshape(-1, C, H, W)
         # Feature output (N, num_features)
         feat_output = self.efficientNet(x) 
         # Attention output (N, dim_attn * num_heads)
         attn_output = self.MAT_block(feat_output)
-        # Static and Dynamic Block
-        score_static = self.static_block(attn_output).mean(dim=1)
-        score_dynamic = self.dynamic_block(attn_output)
-        score = self.w_static * score_static + (1. - self.w_static) * score_dynamic
+        # Static (N, ) and Dynamic Block
+        score_static = self.static_block(attn_output)#.mean(dim=1)
+        #score_dynamic = self.dynamic_block(attn_output)
+        score = self.w_static * score_static# + (1. - self.w_static) * score_dynamic
         return score, attn_output
