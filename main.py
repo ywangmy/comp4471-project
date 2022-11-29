@@ -37,6 +37,12 @@ def main():
     args = my_parse_args()
     config = load_config(args.config)
 
+    # Writer
+    writer = SummaryWriter(comment='useless')
+    # - purge_step: redo experiment from step [purge_step]
+    # - comment: show the stage/usage of experiments, e.g. LR_0.1_BATCH_16
+    # - log_dir: use default(runs/CURRENT_DATETIME_HOSTNAME)
+
     # Configure data
     sampler_train, loader_train, loader_val = configure_data(args, config)
 
@@ -62,19 +68,19 @@ def main():
      #torch.backends.cudnn.deterministic = True
 
     optimizer1 = torch.optim.Adam(params=[model.MAT.parameters(), model.static.parameters()], lr=lr, weight_decay=weight_delay)
-    comp4471.train.train_loop(model = model, num_epoch=num_epoch, sampler=sampler_train,
-            loader_train=loader_train, loader_val=loader_val,
-            optimizer=optimizer1,
-            loss_func=comp4471.loss.twoPhaseLoss(phase=1).to(device), eval_func=comp4471.loss.evalLoss().to(device),
-            device=device,
-            phase=1)
+    comp4471.train.train_loop(
+        model = model, num_epoch=num_epoch, device=device, writer=writer
+        sampler=sampler_train, loader_train=loader_train, loader_val=loader_val,
+        optimizer=optimizer1, loss_func=comp4471.loss.twoPhaseLoss(phase=1).to(device), eval_func=comp4471.loss.evalLoss().to(device),
+        start_epoch = 0, val_freq = 2, verbose = True, phase=1,
+        start_iter = 0)
     optimizer2 = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=weight_delay)
-    comp4471.train.train_loop(model = model, num_epoch=num_epoch - num_epoch / 2, sampler=sampler_train,
-            loader_train=loader_train, loader_val=loader_val,
-            optimizer=optimizer2,
-            loss_func=comp4471.loss.twoPhaseLoss(phase=2).to(device), eval_func=comp4471.loss.evalLoss().to(device),
-            device=device,
-            phase=2)
+    comp4471.train.train_loop(
+        model = model, num_epoch=num_epoch - num_epoch / 2, device=device, writer=writer
+        sampler=sampler_train, loader_train=loader_train, loader_val=loader_val,
+        optimizer=optimizer2, loss_func=comp4471.loss.twoPhaseLoss(phase=2).to(device), eval_func=comp4471.loss.evalLoss().to(device),
+        start_epoch = 0, val_freq = 2, verbose = True, phase=2,
+        start_iter = 0)
 
 if __name__ == '__main__':
     main()
