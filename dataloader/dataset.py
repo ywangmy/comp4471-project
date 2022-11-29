@@ -24,6 +24,7 @@ class DfdcDataset(Dataset):
         self.mode = mode
         self.trans = trans
         self.trans_totensor = create_transforms_totensor()
+        self.next_epoch()
 
     def next_epoch(self):
         # k fold
