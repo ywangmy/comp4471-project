@@ -24,10 +24,12 @@ def train_epoch(model, device, writer, data_loader,
     model.train()
     #for iter, (X, y) in enumerate(data_loader):
     for iter, sample in enumerate(data_loader):
-        imgs = sample["image"].cuda()
-        labels = sample["labels"].cuda().float()
+        # X is images
+        X = sample["image"]
+        # y is labels
+        y = sample["labels"]
         break
-        X = X.to(device, non_blocking=True); y = y.to(device, non_blocking=True)
+        X = X.to(device, non_blocking=True); y = y.to(device, non_blocking=True) # y should be float
         score = model(X)
         loss = loss_func(score, y).mean()
         writer.add_scalar(f'Loss/train{phase}', loss, start_iter+iter)
