@@ -2,8 +2,8 @@ import torch
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
-from MAT import MultiHeadAttention
-from MAT import SelfAttention
+from .MAT import MultiHeadAttention
+from .MAT import SelfAttention
 
 def get_pretrained(num_classes = 1000):
     # https://pytorch.org/vision/stable/models/generated/torchvision.models.efficientnet_v2_s.html#torchvision.models.efficientnet_v2_s
@@ -45,16 +45,18 @@ class staticClassifier(nn.Module):
         return score
 
 class ASRID(nn.Module):
-    def __init__(self, batch_size, num_frames=1, num_features=1536, num_heads=32, dim_attn=1536):
+    def __init__(self, batch_size, num_frames=1, num_features=1000, num_heads=10, dim_attn=1000):
         super().__init__()
         # Parameters setup
         self.num_features = num_features
         self.num_heads = num_heads
         self.batch_size = batch_size
+        self.num_frames = num_frames
+        self.dim_attn = dim_attn
         
         # Blocks(/net/layer/model) setup
         self.efficientNet = get_pretrained(self.num_features)
-        self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.embed_dim)
+        self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.dim_attn)
         self.static_block = staticClassifier(self.dim_attn * self.num_heads)
         self.dynamic_block = MatNorm() # baseline
 

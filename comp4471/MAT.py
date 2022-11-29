@@ -48,7 +48,7 @@ class SelfAttention(nn.Module):
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         
-        self.attn_block = nn.MultiheadAttention(embed_dim=self.embed_dim, num_head=self.num_heads)
+        self.attn_block = nn.MultiheadAttention(embed_dim=self.embed_dim, num_heads=self.num_heads)
         self.fc_query = nn.Linear(self.num_features, self.attn_block.embed_dim, bias=False)
         self.fc_key = nn.Linear(self.num_features, self.attn_block.kdim, bias=False)
         self.fc_value = nn.Linear(self.num_features, self.attn_block.vdim, bias=False)        

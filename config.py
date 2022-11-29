@@ -12,7 +12,7 @@ DEFAULTS = {
         #"momentum": 0.9,
         "weight_decay": 0.005,
         #"clip": 1.,
-        "learning_rate": 0.1,
+        "lr": 0.1,
         #"classifier_lr": -1,
         #"nesterov": True,
         "schedule": {

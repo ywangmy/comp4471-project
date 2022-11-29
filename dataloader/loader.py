@@ -1,6 +1,7 @@
 import torch
 from .dataset import DfdcDataset
 from .augment import create_transforms_train, create_transforms_val
+from torch.utils.data import DataLoader
 
 # https://pytorch.org/docs/stable/data.html
 def configure_data(args, config):
@@ -26,20 +27,23 @@ def configure_data(args, config):
     # https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel
     # https://pytorch.org/docs/stable/distributed.html#distributed-launch
     # https://pytorch.org/tutorials/beginner/dist_overview.html#data-parallel-training
-    sampler_train = torch.utils.data.distributed.DistributedSampler(data_train)
-    sampler_val = torch.utils.data.distributed.DistributedSampler(data_val)
+    sampler_train = None
+    sampler_val = None
+    if args.is_distributed:
+        sampler_train = torch.utils.data.distributed.DistributedSampler(data_train)
+        sampler_val = torch.utils.data.distributed.DistributedSampler(data_val)
 
     # Loader
     loader_train = DataLoader(data_train,
-                              batch_size=config.batch_size,
-                              shuffle=train_sampler is None,
+                              batch_size=config['optimizer']['batch_size'],
+                              shuffle=sampler_train is None,
                               sampler=sampler_train,
                               pin_memory=False,
                               # num_workers=args.workers,
                               )
 
     loader_val = DataLoader(data_val,
-                            batch_size=config.batch_size * 2, # ???
+                            batch_size=config['optimizer']['batch_size'] * 2, # ???
                             sampler=sampler_val,
                             shuffle=False,
                             pin_memory=True,
