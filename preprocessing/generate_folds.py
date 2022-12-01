@@ -101,15 +101,21 @@ def main():
             for v in p.imap_unordered(func, ori_fakes):
                 pbar.update()
                 data.extend(v)
-    fold_data = []
+
+    data_by_video = {video_name: [] for video_name, _ in ori_fakes}
     for img_path, label, ori_vid in data:
         path = Path(img_path)
         video = path.parent.name
         file = path.name
-        assert video_fold[video] == video_fold[ori_vid], "original video and fake have leak  {} {}".format(ori_vid,
-                                                                                                           video)
-        fold_data.append([video, file, label, ori_vid, int(file.split("_")[0]), video_fold[video]])
-    random.shuffle(fold_data)
+        assert video_fold[video] == video_fold[ori_vid], \
+            "original video and fake have leak  {} {}".format(ori_vid, video)
+        data_by_video[video].extend([file, label, ori_vid, int(file.split("_")[0]), video_fold[video]])
+    random.shuffle(data_by_video)
+
+    fold_data = []
+    for video_name, records in data_by_video.items():
+        for record in records:
+            fold_data.append([video_name, *record])
     pd.DataFrame(fold_data, columns=["video", "file", "label", "original", "frame", "fold"]).to_csv(args.out, index=False)
 
 
