@@ -5,6 +5,7 @@ import random
 from functools import partial
 from multiprocessing.pool import Pool
 from pathlib import Path
+import numpy as np
 
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -102,20 +103,27 @@ def main():
                 pbar.update()
                 data.extend(v)
 
-    data_by_video = {video_name: [] for video_name, _ in ori_fakes}
+    video_names = []
+    for ori, fake in ori_fakes:
+        video_names.extend([ori, fake])
+    video_names = [*set(video_names)]
+
+    data_by_video = {video_name: [] for video_name in video_names}
     for img_path, label, ori_vid in data:
         path = Path(img_path)
         video = path.parent.name
         file = path.name
         assert video_fold[video] == video_fold[ori_vid], \
             "original video and fake have leak  {} {}".format(ori_vid, video)
-        data_by_video[video].extend([file, label, ori_vid, int(file.split("_")[0]), video_fold[video]])
-    random.shuffle(data_by_video)
+        data_by_video[video].append([file, label, ori_vid, int(file.split("_")[0]), video_fold[video]])
+
+    random.shuffle(video_names)
 
     fold_data = []
-    for video_name, records in data_by_video.items():
-        for record in records:
+    for video_name in video_names:
+        for record in data_by_video[video_name]:
             fold_data.append([video_name, *record])
+
     pd.DataFrame(fold_data, columns=["video", "file", "label", "original", "frame", "fold"]).to_csv(args.out, index=False)
 
 
