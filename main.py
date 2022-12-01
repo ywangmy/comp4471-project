@@ -21,7 +21,8 @@ from dataloader.loader import configure_data
 
 def my_parse_args():
     parser = argparse.ArgumentParser("ASRID")
-    parser.add_argument('--config', metavar='CONFIG_FILE', help='path to configuration file')
+    parser.add_argument('--comment', type=str)
+    parser.add_argument('--config', metavar='CONFIG_FILE', help='path to configuration file', default='conf.json')
     parser.add_argument('--is-distributed', help='is distributed', action='store_true') # action-> having means True
     parser.add_argument('--workers', type=int, default=6, help='number of cpu threads to use')
     parser.add_argument('--fold', type=int, default=0)
@@ -45,7 +46,7 @@ def main():
     setup_seed(config['seed'])
 
     # Writer
-    writer = SummaryWriter(comment='useless')
+    writer = SummaryWriter(comment = args.comment)
     # - purge_step: redo experiment from step [purge_step]
     # - comment: show the stage/usage of experiments, e.g. LR_0.1_BATCH_16
     # - log_dir: use default(runs/CURRENT_DATETIME_HOSTNAME)
