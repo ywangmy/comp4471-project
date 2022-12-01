@@ -1,11 +1,8 @@
 import json
 
 DEFAULTS = {
-    #"network": "dpn",
-    #"encoder": "dpn92",
     "size": 380,
     "seed": 4471,
-    #"model_params": {},
     "optimizer": {
         "batch_size": 32,
         #"type": "SGD",  # supported: SGD, Adam
@@ -17,8 +14,8 @@ DEFAULTS = {
         #"nesterov": True,
         "schedule": {
             #"type": "constant",  # supported: constant, step, multistep, exponential, linear, poly
-            #"mode": "epoch",  # supported: epoch, step
-            "epochs": 10,
+            "num_epoch": 5,
+            "start_epoch": 0
         }
     },
     #"normalize": {
@@ -26,7 +23,6 @@ DEFAULTS = {
     #    "std": [0.229, 0.224, 0.225]
     #}
 }
-
 
 def _merge(src, dst):
     for k, v in src.items():

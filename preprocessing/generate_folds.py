@@ -109,7 +109,7 @@ def main():
         assert video_fold[video] == video_fold[ori_vid], "original video and fake have leak  {} {}".format(ori_vid,
                                                                                                            video)
         fold_data.append([video, file, label, ori_vid, int(file.split("_")[0]), video_fold[video]])
-    random.shuffle(fold_data)
+    #random.shuffle(fold_data)
     pd.DataFrame(fold_data, columns=["video", "file", "label", "original", "frame", "fold"]).to_csv(args.out, index=False)
 
 

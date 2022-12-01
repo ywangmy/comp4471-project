@@ -21,7 +21,8 @@ from dataloader.loader import configure_data
 
 def my_parse_args():
     parser = argparse.ArgumentParser("ASRID")
-    parser.add_argument('--config', metavar='CONFIG_FILE', help='path to configuration file')
+    parser.add_argument('--comment', type=str)
+    parser.add_argument('--config', metavar='CONFIG_FILE', help='path to configuration file', default='conf.json')
     parser.add_argument('--is-distributed', help='is distributed', action='store_true') # action-> having means True
     parser.add_argument('--workers', type=int, default=6, help='number of cpu threads to use')
     parser.add_argument('--fold', type=int, default=0)
@@ -44,11 +45,8 @@ def main():
     config = load_config(args.config)
     setup_seed(config['seed'])
 
-    # Writer
-    writer = SummaryWriter(comment='useless')
-    # - purge_step: redo experiment from step [purge_step]
-    # - comment: show the stage/usage of experiments, e.g. LR_0.1_BATCH_16
-    # - log_dir: use default(runs/CURRENT_DATETIME_HOSTNAME)
+    # Configure data
+    sampler_train, loader_train, loader_val = configure_data(args, config)
 
     # Distributed
     print(f'is_distributed flag={args.is_distributed}')
@@ -56,12 +54,6 @@ def main():
         local_rank = int(os.environ["LOCAL_RANK"])
         # dist.init_process_group(backend="nccl")
         dist.init_process_group(backend='nccl', init_method='tcp://127.0.0.1:6666', world_size=1, rank=local_rank)
-
-    # Configure data
-    sampler_train, loader_train, loader_val = configure_data(args, config)
-
-    # Train loop
-    start_epoch = 0
 
     # Device
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
@@ -71,27 +63,35 @@ def main():
 
     # Resume
     lr = config['optimizer']['lr']
-    num_epoch = config['optimizer']['schedule']['epochs']
+    num_epoch = config['optimizer']['schedule']['num_epoch']
+    start_epoch = config['optimizer']['schedule']['start_epoch']
     weight_delay= config['optimizer']['weight_decay']
+
+    # Writer
+    writer = SummaryWriter(comment = args.comment)
+    # - purge_step: redo experiment from step [purge_step]
+    # - comment: show the stage/usage of experiments, e.g. LR_0.1_BATCH_16
+    # - log_dir: use default(runs/CURRENT_DATETIME_HOSTNAME)
     writer.add_hparams({'lr': lr, 'bsize': config['optimizer']['batch_size']}, {})
 
     optimizer1 = torch.optim.Adam([
+        {'params': model.efficientNet.parameters(), 'lr': lr*10},
         {'params': model.multiattn_block.parameters()},
         {'params': model.static_block.parameters()}
     ], lr=lr, weight_decay=weight_delay)
-    train_loop(
+    start_epoch = train_loop(
         model = model, num_epoch=num_epoch, device=device, writer=writer,
         sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
         optimizer=optimizer1, loss_func=loss.twoPhaseLoss(phase=1).to(device), eval_func=loss.evalLoss().to(device),
-        start_epoch=0, phase=1,
+        start_epoch=start_epoch, phase=1,
         start_iter=0) # kwargs
 
     optimizer2 = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=weight_delay)
-    train_loop(
+    start_epoch = train_loop(
         model = model, num_epoch=num_epoch - num_epoch / 2, device=device, writer=writer,
         sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
         optimizer=optimizer2, loss_func=loss.twoPhaseLoss(phase=2).to(device), eval_func=loss.evalLoss().to(device),
-        start_epoch=0, phase=2,
+        start_epoch=start_epoch, phase=2,
         start_iter=0) # kwargs
 
 if __name__ == '__main__':
