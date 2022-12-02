@@ -12,7 +12,11 @@ print('sizes of train, val, test:', len(json_train), len(json_val), len(json_tes
 
 frame_number = set([])
 
-for key in json_train:
-    frame_number.add(len(json_train[key]['frames']))
+for v in json_train:
+    frame_number.add(len(v[3]))
 
 print('range of frame numbers', frame_number)
+
+print('train[:2]', json_train[:2])
+print('val[:2]', json_val[:2])
+print('test[:2]', json_test[:2])
