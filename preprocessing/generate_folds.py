@@ -24,7 +24,7 @@ cv2.setNumThreads(0)
 def get_frames(entry, root_dir):
     video_name, values = entry
     label, ori = values
-    data = []
+    frames = []
     for frame in range(0, 320, 10):
         for actor in range(2):
             image_id = "{}_{}.png".format(frame, actor)
@@ -32,16 +32,14 @@ def get_frames(entry, root_dir):
             ori_img_path = os.path.join(root_dir, 'crops', ori, image_id)
             img_path = ori_img_path if label == 0 else fake_img_path
             if os.path.exists(img_path):
-                data.append([image_id, label, ori])
-    return video_name, data
+                frames.append(image_id)
+    return video_name, {'label': label, 'ori': ori, 'frames': frames}
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Generate Folds")
     parser.add_argument("--root-dir", help="video directory", default="data/")
-    parser.add_argument("--out", type=str, default="folds02.csv", help="CSV file to save")
     parser.add_argument("--seed", type=int, default=777, help="Seed to split, default 777")
-    parser.add_argument("--n_splits", type=int, default=16, help="Num folds, default 10")
     args = parser.parse_args()
 
     return args
@@ -88,19 +86,19 @@ def main():
     with Pool(processes=os.cpu_count()) as p:
         with tqdm(total=len(video_list_train)) as pbar:
             func = partial(get_frames, root_dir=args.root_dir)
-            for video_name, values in p.imap_unordered(func, video_list_train):
+            for video_name, video_dict in p.imap_unordered(func, video_list_train):
                 pbar.update()
-                json_train[video_name] = values
+                json_train[video_name] = video_dict
         with tqdm(total=len(video_list_val)) as pbar:
             func = partial(get_frames, root_dir=args.root_dir)
             for video_name, values in p.imap_unordered(func, video_list_val):
                 pbar.update()
-                json_val[video_name] = values
+                json_val[video_name] = video_dict
         with tqdm(total=len(video_list_test)) as pbar:
             func = partial(get_frames, root_dir=args.root_dir)
             for video_name, values in p.imap_unordered(func, video_list_test):
                 pbar.update()
-                json_test[video_name] = values
+                json_test[video_name] = video_dict
 
     json_all = {'train': json_train, 'val': json_val, 'test': json_test}
     with open("folds.json", "w") as outfile:
