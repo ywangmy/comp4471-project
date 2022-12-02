@@ -4,6 +4,7 @@ import torch.multiprocessing as mp
 import torch.distributed as dist
 import torch.nn.functional as F
 import torch.utils.tensorboard
+from torch.distributed.optim import ZeroRedundancyOptimizer as ZeRO
 
 import torchvision
 import torchvision.datasets
@@ -30,6 +31,20 @@ def evaluate(model, device, test_loader):
     accuracy = correct / total
     return accuracy
 
+import shutil
+def save_checkpoint(state: State, is_best: bool, filename: str):
+    checkpoint_dir = os.path.dirname(filename)
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
+    # save to tmp, then commit by moving the file in case the job gets interrupted while writing the checkpoint
+    tmp_filename = filename + ".tmp"
+    torch.save(state.capture_snapshot(), tmp_filename)
+    os.rename(tmp_filename, filename)
+    print(f"=> saved checkpoint for epoch {state.epoch} at {filename}")
+    if is_best:
+        best = os.path.join(checkpoint_dir, "model_best.pth.tar")
+        print(f"=> best model found at epoch {state.epoch} saving to {best}")
+        shutil.copyfile(filename, best)
 
 # device: id in [0, world_size)
 def main_worker(id, world_size, gpus):
@@ -50,16 +65,6 @@ def main_worker(id, world_size, gpus):
         map_location = {"cuda:0": "cuda:{}".format(local_rank)}
         model.load_state_dict(torch.load(model_filepath, map_location=map_location))
 
-    writer = torch.utils.tensorboard.SummaryWriter()
-    optimizer = torch.optim.AdamW(params=model.parameters())
-    #start_epoch, start_iter = train_loop(
-    #    model = model, num_epoch=1, device=local_rank, writer=writer,
-    #    sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
-    #    optimizer=optimizer2, schedule_policy=schedule_policy,
-    #    loss_func=loss.twoPhaseLoss(phase=2).to(device), eval_func=loss.evalLoss().to(device),
-    #    start_epoch=start_epoch, phase=2,
-    #    start_iter=start_iter) # kwargs
-
     root_path = os.path.dirname(__file__)
     dataset_path = os.path.join(root_path, 'dataset', 'FashionMNIST')
 
@@ -72,19 +77,33 @@ def main_worker(id, world_size, gpus):
 
     print('checkpoint 1')
 
-    batch_size = 102400
+    batch_size = 1024
 
     data_train = torchvision.datasets.FashionMNIST(dataset_path, train=True, download=False, transform = torchvision.transforms.ToTensor())
     data_val = torchvision.datasets.FashionMNIST(dataset_path, train=False, download=False, transform = torchvision.transforms.ToTensor())
     sampler_train = torch.utils.data.distributed.DistributedSampler(dataset=data_train)
-    train_loader = torch.utils.data.DataLoader(dataset=data_train, batch_size=batch_size, sampler=sampler_train, num_workers=world_size)
-    test_loader = torch.utils.data.DataLoader(dataset=data_val, batch_size=batch_size, shuffle=False, num_workers=world_size)
+    loader_train = torch.utils.data.DataLoader(dataset=data_train, batch_size=batch_size, sampler=sampler_train, num_workers=world_size)
+    loader_val = torch.utils.data.DataLoader(dataset=data_val, batch_size=batch_size, shuffle=False, num_workers=world_size)
 
     print('checkpoint 2')
 
     num_epochs = 4
     criterion = nn.CrossEntropyLoss()
     device = torch.device("cuda:{}".format(local_rank))
+
+    writer = torch.utils.tensorboard.SummaryWriter()
+    # optimizer = torch.optim.AdamW(params=model.parameters())
+    # https://pytorch.org/docs/stable/distributed.optim.html#torch.distributed.optim.ZeroRedundancyOptimizer
+    optimizer = ZeRO(params=model.parameters(), optimizer_class=torch.optim.AdamW)
+    lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-2, epochs=num_epochs, steps_per_epoch=len(loader_train), last_epoch=-1, cycle_momentum=False) # AdamW no momentum
+
+    #start_epoch, start_iter = train_loop(
+    #    model = model, num_epoch=1, device=local_rank, writer=writer,
+    #    sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
+    #    optimizer=optimizer2, schedule_policy=schedule_policy,
+    #    loss_func=loss.twoPhaseLoss(phase=2).to(device), eval_func=loss.evalLoss().to(device),
+    #    start_epoch=start_epoch, phase=2,
+    #    start_iter=start_iter) # kwargs
 
     for epoch in range(num_epochs):
 
@@ -93,14 +112,14 @@ def main_worker(id, world_size, gpus):
         # Save and evaluate model routinely
         if epoch % 1 == 0:
             if local_rank == 0:
-                accuracy = evaluate(model=model, device=device, test_loader=test_loader)
+                accuracy = evaluate(model=model, device=device, test_loader=loader_val)
                 #torch.save(model.state_dict(), model_filepath)
                 print("-" * 75)
                 print("Epoch: {}, Accuracy: {}".format(epoch, accuracy))
                 print("-" * 75)
 
         model.train()
-        for data in train_loader:
+        for data in loader_train:
             inputs, labels = data[0].to(device), data[1].to(device)
             optimizer.zero_grad()
             outputs = model(inputs)
@@ -108,8 +127,16 @@ def main_worker(id, world_size, gpus):
             loss.backward()
             optimizer.step()
 
+            lr_scheduler.step()
+
+        if id == 0:
+            is_best = acc1 > state.best_acc1
+            state.best_acc1 = max(acc1, state.best_acc1)
+            save_checkpoint(state, is_best, args.checkpoint_file)
+
     #ddp_logging_data = model._get_ddp_logging_data()
     #assert ddp_logging_data.get("can_set_static_graph") == True
+    dist.destroy_process_group()
 
 import pynvml
 if __name__ == '__main__':

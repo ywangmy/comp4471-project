@@ -42,7 +42,7 @@ def configure_data(args, config):
                               sampler=sampler_train,
                               pin_memory=False,
                               # num_workers=args.workers,
-                              collate_fn=lambda x: x
+                              # collate_fn=lambda x: x
                               )
 
     loader_val = DataLoader(data_val,
@@ -51,6 +51,6 @@ def configure_data(args, config):
                             shuffle=False,
                             pin_memory=True,
                             # num_workers=args.workers,
-                            collate_fn=lambda x: x
+                            # collate_fn=lambda x: x
                             )
     return sampler_train, loader_train, loader_val

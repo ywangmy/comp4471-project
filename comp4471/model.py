@@ -2,6 +2,7 @@ import torch
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 # from .MAT import MultiHeadAttention
 from .MAT import SelfAttention
 
@@ -57,7 +58,7 @@ class staticClassifier(nn.Module):
         batchnorm1_output = self.batchnorm1(fc1_output)
         prelu_output = self.PReLU(batchnorm1_output)
         fc2_output = self.fc2(prelu_output)
-        score = F.softmax(fc2_output, dim=2)
+        score = F.softmax(fc2_output, dim=1)
         score = score[:, 0]
         return score
 
@@ -145,25 +146,29 @@ class ASRID(nn.Module):
         # Change x: (N, F, ...) to x: (N * F, ...)
         #print(f'x.size()={x.size()}, type={x.type()}')
         N, F, C, H, W = list(x.size())
-        x_imgs = torch.reshape(x, (-1, C, H, W))
+        #x_imgs = torch.reshape(x, (-1, C, H, W))
 
         #print(f'main forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
 
         # Feature output (N, num_features)
-        feat_output = torch.FloatTensor([self.efficientNet(img) for img in x])
+        feat_output = torch.stack([self.efficientNet(img) for img in x])
         #print(f'feat_output.size()={feat_output.size()}')
 
         # Attention output (N, F, dim_attn)
-        attn_results = torch.FloatTensor([self.multiattn_block(feat) for feat in feat_output])
-        attn_output = attn_results[:, 0]
-        attn_output_weights = attn_results[:, 1]
+        attn_results = [self.multiattn_block(feat) for feat in feat_output]
+        attn_output = torch.stack([output for output, _ in attn_results])
+        attn_output_weights = torch.stack([output_weight for _, output_weight in attn_results])
 
         #print(f'attn_output.size()={attn_output.size()}')
         # Static scores (N, F)
-        score_static_s = torch.FloatTensor([self.static_block(attn) for attn in attn_output])
+        score_static_s = torch.stack([self.static_block(attn) for attn in attn_output])
         # Mean static scores (N,)
         score_static = score_static_s.mean(dim=1)
         # Dynamic scores (N,)
         #score_dynamic = self.dynamic_block(attn_output)
         score = self.w_static * score_static #+ (1. - self.w_static) * score_dynamic
         return score, attn_output
+
+
+
+    
