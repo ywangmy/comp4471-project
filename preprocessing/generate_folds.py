@@ -80,9 +80,9 @@ def main():
             video_list_test.append(entry)
         else:
             video_list_train.append(entry)
-    json_train = {}
-    json_val = {}
-    json_test = {}
+    json_train = []
+    json_val = []
+    json_test = []
     with Pool(processes=os.cpu_count()) as p:
         with tqdm(total=len(video_list_train)) as pbar:
             func = partial(get_frames, root_dir=args.root_dir)
