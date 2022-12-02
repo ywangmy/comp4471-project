@@ -21,19 +21,15 @@ import cv2
 cv2.ocl.setUseOpenCL(False)
 cv2.setNumThreads(0)
 
-def get_frames(entry, root_dir):
-    video_name, values = entry
-    label, ori = values
+def get_frames(video_name, root_dir):
     frames = []
     for frame in range(0, 320, 10):
         for actor in range(2):
             image_id = "{}_{}.png".format(frame, actor)
-            fake_img_path = os.path.join(root_dir, 'crops', video_name, image_id)
-            ori_img_path = os.path.join(root_dir, 'crops', ori, image_id)
-            img_path = ori_img_path if label == 0 else fake_img_path
+            img_path = os.path.join(root_dir, 'crops', video_name, image_id)
             if os.path.exists(img_path):
                 frames.append(image_id)
-    return [video_name, label, ori, frames]
+    return frames
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -69,20 +65,29 @@ def main():
                 video_dict_all[video_id] = (label, ori)
     video_list_all = list(video_dict_all.items())
     np.random.shuffle(video_list_all)
-
+    """
     video_list_train = []
     video_list_val = []
     video_list_test = []
-    for i, entry in enumerate(video_list_all):
-        if i % 10 == 7 or i % 10 == 8:
-            video_list_val.append(entry)
-        elif i % 10 == 9:
-            video_list_test.append(entry)
-        else:
-            video_list_train.append(entry)
+    """
+    video_list_30 = []
+    cnt_video = 0
     json_train = []
     json_val = []
     json_test = []
+    for video_name, (label, ori) in tqdm(video_list_all):
+        frames = get_frames(video_name, args.root_dir)
+        if len(frames) != 30:
+            continue
+        cnt_video += 1
+        entry = [video_name, label, ori, frames]
+        if cnt_video % 10 == 7 or cnt_video % 10 == 8:
+            json_val.append(entry)
+        elif cnt_video % 10 == 9:
+            json_test.append(entry)
+        else:
+            json_train.append(entry)
+    """
     with Pool(processes=os.cpu_count()) as p:
         with tqdm(total=len(video_list_train)) as pbar:
             func = partial(get_frames, root_dir=args.root_dir)
@@ -99,10 +104,11 @@ def main():
             for entry in p.imap_unordered(func, video_list_test):
                 pbar.update()
                 json_test.append(entry)
-
+    """
     json_all = {'train': json_train, 'val': json_val, 'test': json_test}
     with open("folds.json", "w") as outfile:
         json.dump(json_all, outfile)
+    print(f'train: {len(json_train)}, val: {len(json_val)}, test: {len(json_test)}')
 
 if __name__ == '__main__':
     main()
