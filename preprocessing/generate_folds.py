@@ -33,7 +33,7 @@ def get_frames(entry, root_dir):
             img_path = ori_img_path if label == 0 else fake_img_path
             if os.path.exists(img_path):
                 frames.append(image_id)
-    return video_name, {'label': label, 'ori': ori, 'frames': frames}
+    return [video_name, label, ori, frames]
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -86,19 +86,19 @@ def main():
     with Pool(processes=os.cpu_count()) as p:
         with tqdm(total=len(video_list_train)) as pbar:
             func = partial(get_frames, root_dir=args.root_dir)
-            for video_name, video_dict in p.imap_unordered(func, video_list_train):
+            for entry in p.imap_unordered(func, video_list_train):
                 pbar.update()
-                json_train[video_name] = video_dict
+                json_train.append(entry)
         with tqdm(total=len(video_list_val)) as pbar:
             func = partial(get_frames, root_dir=args.root_dir)
-            for video_name, values in p.imap_unordered(func, video_list_val):
+            for entry in p.imap_unordered(func, video_list_val):
                 pbar.update()
-                json_val[video_name] = video_dict
+                json_val.append(entry)
         with tqdm(total=len(video_list_test)) as pbar:
             func = partial(get_frames, root_dir=args.root_dir)
-            for video_name, values in p.imap_unordered(func, video_list_test):
+            for entry in p.imap_unordered(func, video_list_test):
                 pbar.update()
-                json_test[video_name] = video_dict
+                json_test.append(entry)
 
     json_all = {'train': json_train, 'val': json_val, 'test': json_test}
     with open("folds.json", "w") as outfile:
