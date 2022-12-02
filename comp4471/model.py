@@ -134,7 +134,7 @@ class ASRID(nn.Module):
 
         # Other parameters
         # self.w_static = torch.rand((1,))
-        self.w_static = 0.8
+        self.w_static = 1.
 
     def forward(self, x):
         """
@@ -171,4 +171,4 @@ class ASRID(nn.Module):
 
 
 
-    
+

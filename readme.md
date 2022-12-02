@@ -24,4 +24,5 @@ https://github.com/selimsef/dfdc_deepfake_challenge
 Distributed training:
 1. https://pytorch.org/docs/stable/elastic/train_script.html
 2. https://leimao.github.io/blog/PyTorch-Distributed-Training/
-3. Pytorch Elastic: https://github.com/pytorch/elastic
+3. Pytorch Elastic: https://github.com/pytorch/elastic, https://pytorch.org/docs/stable/elastic/run.html
+4. (future) https://pytorch.org/docs/stable/distributed.algorithms.join.html
