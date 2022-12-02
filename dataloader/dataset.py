@@ -30,11 +30,11 @@ class DfdcDataset(Dataset):
             'folds_csv_path and folds_json_path cannot be both None'
         self.folds_json_path = folds_json_path
         self.folds_csv_path = folds_csv_path
-        if folds_json_path is not None:
-            with open(folds_csv_path, 'r') as openfile:
-                self.folds_json = json.load(openfile)
-        else:
-            self.folds_csv = pd.read_csv(self.folds_csv_path)
+        #if folds_json_path is not None:
+        with open(folds_csv_path) as openfile:
+            self.folds_json = json.load(openfile)
+        #else:
+        #    self.folds_csv = pd.read_csv(self.folds_csv_path)
         self.mode = mode
         self.trans = trans
         self.trans_totensor = create_transforms_totensor()
@@ -59,13 +59,11 @@ class DfdcDataset(Dataset):
     def __getitem__(self, index: int):
         while True:
             # video_name, frame_name, label, ori_video, frame, fold = self.data[index]
-            video_name, frames = self.data[index]
+            video_name, label, ori, frames = self.data[index]
             path_common = os.path.join(self.root_dir, self.crops_dir, video_name)
             try:
                 img_tensors = []
-                for entry in frames:
-                    frame_id, label, ori = entry
-                    labels.append(label)
+                for frame_id in frames:
                     img_path = os.path.join(path_common, frame_id)
                     image = cv2.imread(img_path, cv2.IMREAD_COLOR)
                     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -76,8 +74,9 @@ class DfdcDataset(Dataset):
                         img_tensors.append(self.trans_totensor(image=image)['image'])
                 video_tensor = torch.stack(img_tensors, dim=0)
                 return {"video": video_tensor,
-                        "label": np.array((frame[0][1],)),
-                        "video_name": video_name}
+                        "video_name": video_name,
+                        "label": np.array((label,)),
+                        "ori": ori}
             except Exception as e:
                 traceback.print_exc(file=sys.stdout)
                 print("Broken image", os.path.join(self.root_dir, self.crops_dir, video_name, img_file))

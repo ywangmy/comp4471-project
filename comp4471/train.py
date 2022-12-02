@@ -31,6 +31,8 @@ def train_epoch(model, device, data_loader, writer,
         X = sample["video"].float()
         ## y is labels
         y = sample["label"].float()
+        video_name = sample['video_name']
+        ori_name = sample['ori']
         X = X.to(device, non_blocking=True); y = y.to(device, non_blocking=True) # y should be float()
         score, attn_output = model(X)
 
