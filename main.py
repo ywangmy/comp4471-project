@@ -56,13 +56,18 @@ def main():
         dist.init_process_group(backend='nccl', init_method='tcp://127.0.0.1:6666', world_size=1, rank=local_rank)
 
     # Device
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
 
     # Load classifier into model
     model = ASRID(batch_size=config['optimizer']['batch_size']).to(device)
 
     # Resume
     lr = config['optimizer']['lr']
+    lr_decay = config['optimizer']['schedule']['lr_decay']
     num_epoch = config['optimizer']['schedule']['num_epoch']
     start_epoch = config['optimizer']['schedule']['start_epoch']
     weight_delay= config['optimizer']['weight_decay']
@@ -72,25 +77,29 @@ def main():
     # - purge_step: redo experiment from step [purge_step]
     # - comment: show the stage/usage of experiments, e.g. LR_0.1_BATCH_16
     # - log_dir: use default(runs/CURRENT_DATETIME_HOSTNAME)
-    writer.add_hparams({'lr': lr, 'bsize': config['optimizer']['batch_size']}, {})
+    #writer.add_hparams({'lr': lr, 'bsize': config['optimizer']['batch_size']}, {})
 
     optimizer1 = torch.optim.Adam([
         {'params': model.efficientNet.parameters(), 'lr': lr*10},
         {'params': model.multiattn_block.parameters()},
         {'params': model.static_block.parameters()}
     ], lr=lr, weight_decay=weight_delay)
+    lr_scheduler1 = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer1, mode='min', factor=0.3, patience=3, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08, verbose=True)
     start_epoch = train_loop(
         model = model, num_epoch=num_epoch, device=device, writer=writer,
         sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
-        optimizer=optimizer1, loss_func=loss.twoPhaseLoss(phase=1).to(device), eval_func=loss.evalLoss().to(device),
+        optimizer=optimizer1, lr_sheduler=lr_scheduler1, 
+	loss_func=loss.twoPhaseLoss(phase=1).to(device), eval_func=loss.evalLoss().to(device),
         start_epoch=start_epoch, phase=1,
         start_iter=0) # kwargs
 
     optimizer2 = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=weight_delay)
+    lr_scheduler2 = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer2, mode='min', factor=0.3, patience=3, threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08, verbose=True)
     start_epoch = train_loop(
         model = model, num_epoch=num_epoch - num_epoch / 2, device=device, writer=writer,
         sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
-        optimizer=optimizer2, loss_func=loss.twoPhaseLoss(phase=2).to(device), eval_func=loss.evalLoss().to(device),
+        optimizer=optimizer2, lr_sheduler=lr_scheduler2, 
+        loss_func=loss.twoPhaseLoss(phase=2).to(device), eval_func=loss.evalLoss().to(device),
         start_epoch=start_epoch, phase=2,
         start_iter=0) # kwargs
 
