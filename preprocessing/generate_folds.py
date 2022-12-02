@@ -52,6 +52,7 @@ def get_frames(entry, root_dir):
     label, split, ori = values
     data = []
     for frame in range(0, 320, 10):
+        print(frame)
         for actor in range(2):
             image_id = "{}_{}.png".format(frame, actor)
             fake_img_path = os.path.join(video_name, image_id)
@@ -61,8 +62,12 @@ def get_frames(entry, root_dir):
                 # img = cv2.imread(img_path)[..., ::-1]
                 if os.path.exists(img_path):
                     data.append([img_path, label, ori_vid])
+                else:
+                    #print(f'{img_path} not found')
+                    pass
             except:
                 pass
+    print('return', data)
     return data
     
 def parse_args():
@@ -100,24 +105,30 @@ def main():
             with open(os.path.join(args.root_dir, d, "metadata.json")) as metadata_json:
                 metadata = json.load(metadata_json)
             for video_file, values in metadata.items():
-                label, split, ori = values
+                video_id = video_file[:-4] # slice ".mp4"
+                print(video_file, values)
+                label = values['label']
+                split = values['split']
+                ori = video_id
                 label = 0 if label == 'FAKE' else 1
-                {"label": "FAKE", "split": "train", "original": "wynotylpnm.mp4"}
+                if label == 0:
+                    ori = values['original'][:-4]
+                # {"label": "FAKE", "split": "train", "original": "wynotylpnm.mp4"}
                 # fold = None
                 # for i, fold_dirs in enumerate(folds):
                 #     if part in fold_dirs:
                 #         fold = i
                 #         break
                 # assert fold is not None
-                video_id = video_file[:-4] # slice ".mp4"
                 # video_fold[video_id] = fold
                 if split == 'train':
                     video_dict_train[video_id] = (label, split, ori)
                 else:
                     video_dict_val[video_id] = (label, split, ori)
-    video_list_train = video_dict_train.items()
-    video_list_val = video_dict_val.items()    
-    random.shuffle(video_list)
+    video_list_train = list(video_dict_train.items())
+    video_list_val = list(video_dict_val.items())
+    # print(video_list_train)
+    np.random.shuffle(video_list_train)
     # for fold in range(len(folds)):
     #     holdoutset = {k for k, v in video_fold.items() if v == fold}
     #     trainset = {k for k, v in video_fold.items() if v != fold}
@@ -139,13 +150,13 @@ def main():
     json_val = []    
     with Pool(processes=os.cpu_count()) as p:
         with tqdm(total=len(video_list_train)) as pbar:
-            func = partial(get_frames, ideo_dir=args.root_dir)
-            for v in p.imap_unordered(func, video_list):
+            func = partial(get_frames, root_dir=args.root_dir)
+            for v in p.imap_unordered(func, video_list_train):
                 pbar.update()
                 json_train.extend(v)
         with tqdm(total=len(video_list_val)) as pbar:
-            func = partial(get_frames, ideo_dir=args.root_dir)
-            for v in p.imap_unordered(func, video_list):
+            func = partial(get_frames, root_dir=args.root_dir)
+            for v in p.imap_unordered(func, video_list_val):
                 pbar.update()
                 json_val.extend(v)
     json_all = {'train': json_train, 'val': json_val}
