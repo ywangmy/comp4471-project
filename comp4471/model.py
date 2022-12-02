@@ -20,11 +20,11 @@ class MatNorm(nn.Module):
     def forward(self, x):
         """
         Input:
-        - x: A feature vector (attention output), shape: (N, F, H, W)
+        - x: A feature vector (attention output), shape: (N, F, C, H, W)
         Output:
         - x: Dynamic score
         """
-        #N, F, H, W = x.shape
+        #N, F, C, H, W = x.shape
         N, D = list(x.size())
         x = torch.linalg.matrix_norm(x) # https://pytorch.org/docs/stable/generated/torch.linalg.matrix_norm.html#torch.linalg.matrix_norm
         x = torch.diff(x, dim=0) # https://pytorch.org/docs/stable/generated/torch.diff.html?highlight=diff#torch.diff
@@ -86,15 +86,14 @@ class ASRID(nn.Module):
         - score (N, ): Score
         """
         # Change x: (N, F, ...) to x: (N * F, ...)
-        #N, F, C, H, W = list(x.size())
         #print(f'x.size()={x.size()}, type={x.type()}')
-        N, C, H, W = list(x.size())
-        x = torch.reshape(x, (-1, C, H, W))
+        N, F, C, H, W = list(x.size())
+        x_imgs = torch.reshape(x, (-1, C, H, W))
 
         #print(f'main forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
 
         # Feature output (N, num_features)
-        feat_output = self.efficientNet(x)
+        feat_output = self.efficientNet(x_imgs)
         #print(f'feat_output.size()={feat_output.size()}')
 
         # Attention output (N, dim_attn * num_heads)

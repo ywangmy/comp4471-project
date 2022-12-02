@@ -28,9 +28,9 @@ def train_epoch(model, device, data_loader, writer,
         # print(f'iter = {iter}, total {torch.cuda.get_device_properties(0).total_memory / 1024**2}, alloc {torch.cuda.memory_allocated(device) / 1024**2}, maxalloc {torch.cuda.max_memory_allocated(device) / 1024**2}, reserved {torch.cuda.memory_reserved(0) / 1024**2}')
 
         # X is images
-        X = sample["image"].float()
+        X = sample["video"].float()
         ## y is labels
-        y = sample["labels"].float()
+        y = sample["label"].float()
         X = X.to(device, non_blocking=True); y = y.to(device, non_blocking=True) # y should be float()
         score, attn_output = model(X)
 
