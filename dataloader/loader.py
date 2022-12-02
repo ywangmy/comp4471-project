@@ -15,12 +15,14 @@ def configure_data(args, config):
                              crops_dir=args.crops_dir,
                              fold=args.fold,
                              folds_csv_path=args.folds_csv_path,
+                             folds_json_path=args.folds_json_path,
                              trans=trans_train)
     data_val = DfdcDataset(mode='val',
                              root_dir=args.root_dir,
                              crops_dir=args.crops_dir,
                              fold=args.fold,
                              folds_csv_path=args.folds_csv_path,
+                             folds_json_path=args.folds_json_path,
                              trans=trans_val)
 
     # Customized sampler
@@ -40,6 +42,7 @@ def configure_data(args, config):
                               sampler=sampler_train,
                               pin_memory=False,
                               # num_workers=args.workers,
+                              collate_fn=lambda x: x
                               )
 
     loader_val = DataLoader(data_val,
@@ -48,5 +51,6 @@ def configure_data(args, config):
                             shuffle=False,
                             pin_memory=True,
                             # num_workers=args.workers,
+                            collate_fn=lambda x: x
                             )
     return sampler_train, loader_train, loader_val

@@ -5,6 +5,8 @@ import torch.nn.functional as F
 # from .MAT import MultiHeadAttention
 from .MAT import SelfAttention
 
+import math
+
 def get_pretrained(num_classes = 1000):
     # https://pytorch.org/vision/stable/models/generated/torchvision.models.efficientnet_v2_s.html#torchvision.models.efficientnet_v2_s
     if num_classes == 1000:
@@ -67,12 +69,12 @@ class PositionalEncoding(nn.Module):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[0, :, 0::2] = torch.sin(position * div_term)
-        pe[0, :, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pe', pe)
+        #position = torch.arange(max_len).unsqueeze(1)
+        #div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        #pe = torch.zeros(max_len, 1, d_model)
+        #pe[0, :, 0::2] = torch.sin(position * div_term)
+        #pe[0, :, 1::2] = torch.cos(position * div_term)
+        #self.register_buffer('pe', pe)
 
     def forward(self, x):
         """
@@ -80,7 +82,7 @@ class PositionalEncoding(nn.Module):
         """
         x = x + self.pe[:x.shape[1]]
         return self.dropout(X)
-    
+
 class dynamicClassifier(nn.Module):
     """
     https://pytorch.org/tutorials/beginner/transformer_tutorial.html
@@ -90,11 +92,10 @@ class dynamicClassifier(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.dropout = dropout
-        self.pos_encoder = PositionalEncoding(in_channels, dropout)
-        encoder_layers = TransformerEncoderLayer(in_channels, nhead, d_hid, dropout)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder = nn.Embedding(ntoken, d_model)
-        self.d_model = d_model
+        #self.pos_encoder = PositionalEncoding(in_channels, dropout)
+        #encoder_layers = TransformerEncoderLayer(in_channels, nhead, d_hid, dropout)
+        #self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+        #self.encoder = nn.Embedding(ntoken, d_model)
         self.fc = nn.Linear(in_channels, out_channels)
         self.init_weights()
     def init_weights(self) -> None:
@@ -128,7 +129,7 @@ class ASRID(nn.Module):
         self.efficientNet = get_pretrained(self.num_features)
         self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.dim_attn)
         self.static_block = staticClassifier(in_channels=self.dim_attn)
-        self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn) # baseline
+        #self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn) # baseline
 
         # Other parameters
         # self.w_static = torch.rand((1,))
@@ -156,13 +157,13 @@ class ASRID(nn.Module):
         attn_results = torch.FloatTensor([self.multiattn_block(feat) for feat in feat_output])
         attn_output = attn_results[:, 0]
         attn_output_weights = attn_results[:, 1]
-            
+
         #print(f'attn_output.size()={attn_output.size()}')
         # Static scores (N, F)
         score_static_s = torch.FloatTensor([self.static_block(attn) for attn in attn_output])
-        # Mean static scores (N,) 
+        # Mean static scores (N,)
         score_static = score_static_s.mean(dim=1)
         # Dynamic scores (N,)
-        score_dynamic = self.dynamic_block(attn_output)
-        score = self.w_static * score_static + (1. - self.w_static) * score_dynamic
+        #score_dynamic = self.dynamic_block(attn_output)
+        score = self.w_static * score_static #+ (1. - self.w_static) * score_dynamic
         return score, attn_output

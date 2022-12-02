@@ -5,11 +5,11 @@ import random
 
 import numpy as np
 import cv2
+from tqdm import tqdm
 
 import torch
 from torch.backends import cudnn
 from torch.nn import DataParallel
-from tqdm import tqdm
 import torch.distributed as dist
 from torch.utils.tensorboard import SummaryWriter
 
@@ -28,17 +28,20 @@ def my_parse_args():
     parser.add_argument('--fold', type=int, default=0)
     parser.add_argument('--root-dir', type=str, default="data/")
     parser.add_argument('--folds-csv-path', type=str, default='folds.csv')
+    parser.add_argument('--folds-json-path', type=str, default='folds.json')
     parser.add_argument('--crops-dir', type=str, default='crops')
     parser.add_argument('--output-dir', type=str, default='weights/')
     parser.add_argument('--logdir', type=str, default='logs')
+    parser.add_argument('--backend', type=str, default='nccl') # nccl for GPU, gloo for CPU
     return parser.parse_args()
 
-def setup_seed(seed):
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
+def setup_seed(seed = 4471):
         np.random.seed(seed)
         random.seed(seed)
-        #torch.backends.cudnn.deterministic = True
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
 def main():
     args = my_parse_args()
@@ -87,7 +90,7 @@ def main():
         {'params': model.static_block.parameters()}
     ], lr=lr, weight_decay=weight_delay)
     start_epoch, start_iter = train_loop(
-        model = model, num_epoch=num_epoch, device=device, writer=writer,
+        model=model, num_epoch=num_epoch, device=device, writer=writer,
         sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
         optimizer=optimizer1, schedule_policy=schedule_policy,
         loss_func=loss.twoPhaseLoss(phase=1).to(device), eval_func=loss.evalLoss().to(device),
@@ -96,7 +99,7 @@ def main():
 
     optimizer2 = torch.optim.AdamW(params=model.parameters(), lr=lr, weight_decay=weight_delay)
     start_epoch, start_iter = train_loop(
-        model = model, num_epoch=num_epoch - num_epoch / 2, device=device, writer=writer,
+        model=model, num_epoch=num_epoch - num_epoch / 2, device=device, writer=writer,
         sampler_train=sampler_train, loader_train=loader_train, loader_val=loader_val,
         optimizer=optimizer2, schedule_policy=schedule_policy,
         loss_func=loss.twoPhaseLoss(phase=2).to(device), eval_func=loss.evalLoss().to(device),
