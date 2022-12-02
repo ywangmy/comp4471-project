@@ -69,7 +69,7 @@ def get_frames(entry, root_dir):
                 pass
     print('return', data)
     return data
-    
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Generate Folds")
@@ -92,7 +92,7 @@ def main():
     # print(folds)
     video_fold = {}
     video_dict_train = {}
-    video_dict_val = {}    
+    video_dict_val = {}
     for d in os.listdir(args.root_dir):
         if not os.path.isdir(os.path.join(args.root_dir, d)):
             continue
@@ -125,6 +125,7 @@ def main():
                     video_dict_train[video_id] = (label, split, ori)
                 else:
                     video_dict_val[video_id] = (label, split, ori)
+
     video_list_train = list(video_dict_train.items())
     video_list_val = list(video_dict_val.items())
     # print(video_list_train)
@@ -147,7 +148,7 @@ def main():
     #             pbar.update()
     #             data.extend(v)
     json_train = []
-    json_val = []    
+    json_val = []
     with Pool(processes=os.cpu_count()) as p:
         with tqdm(total=len(video_list_train)) as pbar:
             func = partial(get_frames, root_dir=args.root_dir)
@@ -190,7 +191,6 @@ def main():
     #         fold_data.append([video_name, *record])
 
     # pd.DataFrame(fold_data, columns=["video", "file", "label", "original", "frame", "fold"]).to_csv(args.out, index=False)
-    
 
 if __name__ == '__main__':
     main()

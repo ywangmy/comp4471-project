@@ -2,17 +2,18 @@ import torch
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
-from .MAT import MultiHeadAttention
+# from .MAT import MultiHeadAttention
 from .MAT import SelfAttention
 
 def get_pretrained(num_classes = 1000):
     # https://pytorch.org/vision/stable/models/generated/torchvision.models.efficientnet_v2_s.html#torchvision.models.efficientnet_v2_s
     if num_classes == 1000:
-        efficientNet = torchvision.models.efficientnet_v2_s(weights='DEFAULT', progress=True) # 150MB, 20M params for 1000 classes
-        # efficientNet = torchvision.models.efficientnet_v2_l(weights='DEFAULT', progress=True, num_classes=num_classes) # 455M, 118M params for 1000 classes
+        # model = torchvision.models.resnet18(weights='DEFAULT', progress=True)
+        model = torchvision.models.mobilenet_v3_small(weights='DEFAULT', progress=True)
     else:
-        efficientNet = torchvision.models.efficientnet_v2_s(num_classes=num_classes)
-    return efficientNet
+        pass
+        #efficientNet = torchvision.models.efficientnet_v2_s(num_classes=num_classes)
+    return model
 
 class MatNorm(nn.Module):
     def __init__(self):
@@ -36,7 +37,8 @@ class staticClassifier(nn.Module):
     def __init__(self, in_channels, out_channels=2):
         super().__init__()
         # FC as the final classification layer
-        self.fc = nn.Linear(in_channels, out_channels)
+        self.fc1 = nn.Linear(in_channels, in_channels//2)
+        self.fc2 = nn.Linear(in_channels//2, out_channels)
     def forward(self, x):
         """
         Input:
@@ -44,9 +46,12 @@ class staticClassifier(nn.Module):
         Output:
         - score (N, out_channels=2): Static score
         """
-        fc_output = self.fc(x)
+
+        #print(f'staticClassifier forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
+
+        fc_output = self.fc1(x)
         relu_output = F.relu(fc_output)
-        score = F.softmax(relu_output)
+        score = F.softmax(self.fc2(relu_output))
         score = score[:, 0]
         return score
 
@@ -82,6 +87,8 @@ class ASRID(nn.Module):
         #print(f'x.size()={x.size()}, type={x.type()}')
         N, C, H, W = list(x.size())
         x = torch.reshape(x, (-1, C, H, W))
+
+        #print(f'main forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
 
         # Feature output (N, num_features)
         feat_output = self.efficientNet(x)
