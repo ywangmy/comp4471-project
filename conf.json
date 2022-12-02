@@ -1,12 +1,12 @@
 {
     "optimizer": {
         "batch_size": 180,
-        "weight_decay": 0.005,
-        "lr": 0.00001,
+        "weight_decay": 0.05,
+        "lr": 5e-6,
         "schedule": {
             "num_epoch": 30,
-            "start_epoch": 0
-	    "lr_decay" : 0.8
+            "start_epoch": 0,
+            "schedule_policy": "Cosine"
         }
     }
 }
