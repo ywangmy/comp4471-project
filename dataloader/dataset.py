@@ -41,7 +41,7 @@ class DfdcDataset(Dataset):
         self.epoch=0
         self.next_epoch()
 
-    def next_epoch(self):
+    def next_epoch(self): # only once in init
         """
         Called at initialization
         """

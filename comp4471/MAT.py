@@ -63,8 +63,6 @@ class SelfAttention(nn.Module):
         - attn_output: Attention output
         - attn_output_weights: Attention weights
         """
-        #print(f'SelfAttention forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
-
         query = self.fc_query(x)
         key = self.fc_key(x)
         value = self.fc_value(x)

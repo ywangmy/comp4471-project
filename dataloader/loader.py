@@ -27,7 +27,7 @@ def configure_data(args, config):
 
     # Sampler
     if args.is_distributed:
-        sampler_train = torch.utils.data.distributed.DistributedSampler(dataset=data_train)
+        sampler_train = torch.utils.data.distributed.DistributedSampler(dataset=data_train,shuffle=True)
     else: sampler_train = None
 
     # Loader

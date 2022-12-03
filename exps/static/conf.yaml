@@ -1,0 +1,30 @@
+experiment:
+  exp_name: static_lr1e6
+  ckpt_path: $./exps/${.exp_name}/ckpt1.pth.tar
+  board_dir: $./exps/${.exp_name}/log
+
+optimizer:
+  batch_size: 6
+  weight_decay: 0.001
+  lr: 1e-6
+
+schedule:
+  num_epoch: 30
+  schedule_policy": Plateau # Cosine, Plateau, OneCycle, Exponential
+
+distributed:
+  is_distributed: True
+  gpu_workers: 4 # spawn mode only
+  server:
+    host: localhost
+    port: 4471
+    url: 'tcp://${.host}:{.port}'
+
+data:
+  propotion: Full
+#  fold: 0
+#  root-dir', type=str, default="data/")
+#  folds-csv-path', type=str, default='folds.csv')
+#  folds-json-path', type=str, default='folds.json')
+#  crops-dir', type=str, default='crops')
+#  output-dir: "weights/"
