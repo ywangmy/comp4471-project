@@ -26,12 +26,12 @@ class DfdcDataset(Dataset):
         self.root_dir = root_dir
         self.crops_dir = crops_dir
         self.fold = fold
-        assert folds_csv_path == None and folds_json_path == None, \
+        assert folds_csv_path != None or folds_json_path != None, \
             'folds_csv_path and folds_json_path cannot be both None'
         self.folds_json_path = folds_json_path
         self.folds_csv_path = folds_csv_path
         #if folds_json_path is not None:
-        with open(folds_csv_path) as openfile:
+        with open(folds_json_path) as openfile:
             self.folds_json = json.load(openfile)
         #else:
         #    self.folds_csv = pd.read_csv(self.folds_csv_path)
@@ -73,6 +73,7 @@ class DfdcDataset(Dataset):
                         # mask = results['mask'] # for self.mask is not None
                         img_tensors.append(self.trans_totensor(image=image)['image'])
                 video_tensor = torch.stack(img_tensors, dim=0)
+                #video_tensor = img_tensors
                 return {"video": video_tensor,
                         "video_name": video_name,
                         "label": np.array((label,)),

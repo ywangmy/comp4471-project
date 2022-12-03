@@ -6,7 +6,7 @@ import torch.nn.functional as F
 # https://pytorch.org/docs/stable/generated/torch.nn.BCELoss.html#torch.nn.BCELoss
 class evalLoss(nn.BCELoss):
     def __init__(self):
-        super().__init__(weight=None, reduction='sum')
+        super().__init__(weight=None, reduction='mean')
 
 class dynamicLoss(nn.Module):
     def __init__(self):

@@ -12,4 +12,4 @@ echo "Extracting SSIM masks"
 python preprocessing/generate_diffs.py --video-dir $DATA_ROOT
 
 echo "Generate folds"
-python preprocessing/generate_folds.py --root-dir $DATA_ROOT --out folds.csv
+python preprocessing/generate_folds.py --root-dir $DATA_ROOT
