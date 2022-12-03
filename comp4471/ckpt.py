@@ -33,18 +33,21 @@ class State:
         ckpt_dir = os.path.dirname(filename)
         os.makedirs(ckpt_dir, exist_ok=True)
 
+        if metric is not None and (self.min is None or self.min > metric):
+            self.min = metric
+            best = True
+        else: best = False
+
         # save to tmp, then commit by moving the file in case the job gets interrupted while writing the checkpoint
         tmp_filename = filename + ".tmp"
         torch.save(self.capture_snapshot(), tmp_filename)
         os.rename(tmp_filename, filename)
-        # print(f"=> saved checkpoint for epoch {self.epoch} at {filename}")
+        print(f"=> saved checkpoint for epoch {self.epoch} at {filename}")
 
-        if metric is not None:
-            if self.min is None or self.min > metric:
-                self.min = metric
-                best_filename = filename + ".best"
-                print(f"=> best model found at epoch {self.epoch} saving to {best_filename}")
-                shutil.copyfile(filename, best_filename)
+        if best:
+            best_filename = filename + ".best"
+            shutil.copyfile(filename, best_filename)
+            print(f"=> best model found at epoch {self.epoch} saved to {best_filename}")
 
     def load(self, device, filename=None):
         if filename is None: filename = self.ckpt_path

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
-from torch.distributed.elastic.multiprocessing.errors import record
 
 from datetime import timedelta
 import time
@@ -43,9 +42,9 @@ def train_epoch(model, device, data_loader,
         loss = loss_func(score.view(-1, 1), y)
 
         if writer is not None:
-            writer.add_scalar(f'Loss/train', loss, start_iter+iter)
+            writer.add_scalar(f'His/loss', loss, start_iter+iter)
             for i, param_group in enumerate(optimizer.param_groups):
-                writer.add_scalar(f'Lr/lr{phase}-param{i}', param_group['lr'], start_iter+iter)
+                writer.add_scalar(f'His/lr', param_group['lr'], start_iter+iter)
                 break
 
         optimizer.zero_grad(set_to_none=True)
@@ -86,7 +85,6 @@ def validate_epoch(model, device, data_loader, verbose,
             if iter + 1 == len(data_loader): print(progress.display(0))
         return losses.avg
 
-@record
 def train_loop(state, central_gpu,
             model, num_epoch, device, writer,
             loader_train, loader_val,
@@ -107,7 +105,7 @@ def train_loop(state, central_gpu,
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=2, threshold=0.01, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08, verbose=True)
     elif schedule_policy == 'OneCycle':
         # https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.OneCycleLR
-        lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-5, epochs=num_epoch, steps_per_epoch=len(loader_train), last_epoch=start_iter-1, cycle_momentum=False)
+        lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-6, epochs=num_epoch, steps_per_epoch=len(loader_train), last_epoch=start_iter-1, cycle_momentum=False)
 
     for epoch in range(start_epoch, start_epoch + num_epoch):
         if verbose: print(f'epoch {epoch} in progress')
@@ -127,11 +125,11 @@ def train_loop(state, central_gpu,
             metric = validate_epoch(model=model, device=device, data_loader=loader_val, verbose=verbose, eval_func=eval_func, kwargs=kwargs)
 
             if verbose: print(f'eval{phase} = {metric}')
-            writer.add_scalar(f'Loss/val', metric, start_iter-1)
+            writer.add_scalar(f'His/val', metric, start_iter-1)
             if schedule_policy == 'Cosine': pass
             elif schedule_policy == 'Plateau': lr_scheduler.step(metrics=metric)
             elif schedule_policy == 'OneCycle': pass
 
             state.epoch = epoch + 1
-            state.start_iter = start_iter + 1
+            state.iter = start_iter + 1
             state.save(metric=metric)

@@ -52,15 +52,14 @@ def setup_seed(seed = 4471):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-@record
 def main_worker(worker_id, world_size, gpus, args, config):
     if worker_id is None:
         device = torch.device("cpu")
     else:
         device = gpus[worker_id]
-        print(f'worker {worker_id}/{world_size} are using GPU {device}')
+        print(f'worker {worker_id}/{world_size} are using GPU {device}/{len(gpus)}')
         if args.is_distributed:
-            dist.init_process_group(backend='nccl', init_method='tcp://localhost:2023', world_size=world_size, rank=device)
+            dist.init_process_group(backend='nccl', init_method='tcp://localhost:2023', world_size=world_size, rank=worker_id)
 
         torch.cuda.device(device)
         torch.cuda.empty_cache()
@@ -70,7 +69,9 @@ def main_worker(worker_id, world_size, gpus, args, config):
         if worker_id == 0:
             comp4471.model.get_pretrained()
             print('multi-process unsafe operations finished')
+        print(f'worker {worker_id} before barrier')
         torch.distributed.barrier()
+        print(f'worker {worker_id} after barrier')
     else:
         comp4471.model.get_pretrained()
 
@@ -84,6 +85,7 @@ def main_worker(worker_id, world_size, gpus, args, config):
     # Configure data
     root_path = os.path.dirname(__file__)
     _, loader_train, loader_val = configure_data(args, config)
+    print('data configuration finish')
 
     # Load model
     model = comp4471.model.ASRID(batch_size=batch_size).to(device)
@@ -103,6 +105,7 @@ def main_worker(worker_id, world_size, gpus, args, config):
 
     if args.is_distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=device)
+    print('model definition finish')
 
     # State
     if args.ckpt_path is None:
@@ -110,6 +113,7 @@ def main_worker(worker_id, world_size, gpus, args, config):
     state = comp4471.ckpt.State(model=model, optimizer=optimizer, ckpt_path=args.ckpt_path)
     torch_device = torch.device("cpu") if worker_id is None else torch.device('cuda', device)
     state.load(torch_device)
+    print('state restore finish')
 
     # Writer
     # https://pytorch.org/docs/stable/tensorboard.html#torch.utils.tensorboard.writer.SummaryWriter.add_custom_scalars
@@ -120,12 +124,13 @@ def main_worker(worker_id, world_size, gpus, args, config):
         writer = SummaryWriter(comment = f'{args.comment}_B{batch_size}_Wdecay{weight_delay}_{schedule_policy}', purge_step=state.iter)
         layout = {
             "MyLayout": {
-                "Loss": ["Multiline", ["Loss/train", "Loss/val"]],
+                "His": ["Multiline", ["His/loss", "His/val", "His/lr"]],
             },
         }
         writer.add_custom_scalars(layout)
     else:
         writer = None
+    print('writer ready')
 
     train_loop(state, central_gpu=gpus[0] if worker_id!=None else device,
         model=model, num_epoch=num_epoch, device=device, writer=writer,
@@ -147,6 +152,7 @@ def main_worker(worker_id, world_size, gpus, args, config):
     torch.cuda.empty_cache()
     dist.destroy_process_group()
 
+@record
 def main():
     args = my_parse_args()
     config = load_config(args.config)
@@ -159,15 +165,16 @@ def main():
 
     # sort most available GPUs
     ngpus_per_node = torch.cuda.device_count()
-    gpus = []
-    pynvml.nvmlInit()
-    for i in range(0, ngpus_per_node):
-        h = pynvml.nvmlDeviceGetHandleByIndex(i)
-        info = pynvml.nvmlDeviceGetMemoryInfo(h)
-        # print(f'GPU {i}:{info.free / 1024 ** 2} free, {info.used / 1024 ** 2} used')
-        gpus.append((info.free, i))
-    gpus.sort(reverse=True)
-    gpus = [i for capability, i in gpus ]
+    gpus = range(0, ngpus_per_node)
+    #gpus = []
+    #pynvml.nvmlInit()
+    #for i in range(0, ngpus_per_node):
+    #    h = pynvml.nvmlDeviceGetHandleByIndex(i)
+    #    info = pynvml.nvmlDeviceGetMemoryInfo(h)
+    #    print(f'GPU {i}:{info.free / 1024 ** 2} free, {info.used / 1024 ** 2} used')
+    #    gpus.append((info.free, i))
+    #gpus.sort(reverse=True)
+    #gpus = [i for capability, i in gpus ]
 
     if args.is_distributed:
         assert dist.is_available() and dist.is_nccl_available()
@@ -181,7 +188,7 @@ def main():
         if torch_run:
             # option 1: use torch run
             # Worker failures are handled gracefully by restarting all workers.
-            main_worker(local_rank, ngpus_per_node, range(0, ngpus_per_node), args, config)
+            main_worker(local_rank, ngpus_per_node, gpus, args, config)
         else:
             # option 2: use mp to use less GPU when others are busy
             # If one of the processes exits with a non-zero exit status, the remaining processes are killed and an exception is raised with the cause of termination.
