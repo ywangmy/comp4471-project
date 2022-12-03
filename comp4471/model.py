@@ -3,16 +3,15 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-# from .MAT import MultiHeadAttention
 from .MAT import SelfAttention
 
 import math
 
-def get_pretrained(num_classes = 1000):
+def get_pretrained(num_classes = 1000, download = False):
     # https://pytorch.org/vision/stable/models/generated/torchvision.models.efficientnet_v2_s.html#torchvision.models.efficientnet_v2_s
     if num_classes == 1000:
         # model = torchvision.models.resnet18(weights='DEFAULT', progress=True)
-        model = torchvision.models.mobilenet_v3_small(weights='DEFAULT', progress=True)
+        model = torchvision.models.mobilenet_v3_small(weights='DEFAULT', download=download, progress=True)
     else:
         model = torchvision.models.mobilenet_v3_small(weights=None)
     return model

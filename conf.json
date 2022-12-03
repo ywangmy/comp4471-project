@@ -5,7 +5,6 @@
         "lr": 5e-6,
         "schedule": {
             "num_epoch": 30,
-            "start_epoch": 0,
             "schedule_policy": "Cosine"
         }
     }

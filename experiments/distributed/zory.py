@@ -64,55 +64,6 @@ class ProgressMeter(object):
         fmt = "{:" + str(num_digits) + "d}"
         return "[" + fmt + "/" + fmt.format(num_batches) + "]"
 
-class State:
-    """
-    Container for objects that we want to checkpoint. Represents the
-    current "state" of the worker. This object is mutable.
-    """
-
-    def __init__(self, model, optimizer):
-        self.epoch = -1
-        self.best_acc1 = 0
-        self.model = model
-        self.optimizer = optimizer
-
-    def capture_snapshot(self):
-        """
-        Essentially a ``serialize()`` function, returns the state as an
-        object compatible with ``torch.save()``. The following should work
-        ::
-        snapshot = state_0.capture_snapshot()
-        state_1.apply_snapshot(snapshot)
-        assert state_0 == state_1
-        """
-        return {
-            "epoch": self.epoch,
-            "best_acc1": self.best_acc1,
-            "state_dict": self.model.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
-        }
-
-    def apply_snapshot(self, obj, device_id):
-        """
-        The complimentary function of ``capture_snapshot()``. Applies the
-        snapshot object that was returned by ``capture_snapshot()``.
-        This function mutates this state object.
-        """
-
-        self.epoch = obj["epoch"]
-        self.best_acc1 = obj["best_acc1"]
-        # self.state_dict = obj["state_dict"]
-        self.model.load_state_dict(obj["state_dict"])
-        self.optimizer.load_state_dict(obj["optimizer"])
-
-    def save(self, f):
-        torch.save(self.capture_snapshot(), f)
-
-    def load(self, f, device_id):
-        # Map model to be loaded to specified single gpu.
-        snapshot = torch.load(f, map_location=f"cuda:{device_id}")
-        self.apply_snapshot(snapshot, device_id)
-
 def evaluate(model, device, test_loader):
     model.eval()
     correct = 0
@@ -126,37 +77,6 @@ def evaluate(model, device, test_loader):
             correct += (predicted == labels).sum().item()
     accuracy = correct / total
     return accuracy
-
-import shutil
-def save_checkpoint(state: State, is_best: bool, filename: str):
-    checkpoint_dir = os.path.dirname(filename)
-    os.makedirs(checkpoint_dir, exist_ok=True)
-
-    # save to tmp, then commit by moving the file in case the job gets interrupted while writing the checkpoint
-    tmp_filename = filename + ".tmp"
-    torch.save(state.capture_snapshot(), tmp_filename)
-    os.rename(tmp_filename, filename)
-    print(f"=> saved checkpoint for epoch {state.epoch} at {filename}")
-    if is_best:
-        best = os.path.join(checkpoint_dir, "model_best.pth.tar")
-        print(f"=> best model found at epoch {state.epoch} saving to {best}")
-        shutil.copyfile(filename, best)
-
-def load_checkpoint(
-    checkpoint_file: str,
-    device_id: int,
-    model: nn.parallel.DistributedDataParallel,
-    optimizer,  # SGD
-) -> State:
-    state = State(model, optimizer)
-
-    if os.path.isfile(checkpoint_file):
-        print(f"=> loading checkpoint file: {checkpoint_file}")
-        state.load(checkpoint_file, device_id)
-        print(f"=> loaded checkpoint file: {checkpoint_file}")
-    print(f"=> done restoring from previous checkpoint")
-    return state
-
 
 # device: id in [0, world_size)
 @record
