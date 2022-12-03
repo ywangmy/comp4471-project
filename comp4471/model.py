@@ -60,6 +60,7 @@ class staticClassifier(nn.Module):
         self.fc1 = nn.Linear(in_channels, in_channels)
         self.batchnorm1 = nn.BatchNorm1d(in_channels)
         self.PReLU = nn.PReLU()
+        self.LReLU = nn.LeakyReLU()
         self.fc2 = nn.Linear(in_channels, out_channels)
     def forward(self, x):
         """
@@ -72,11 +73,15 @@ class staticClassifier(nn.Module):
         #print(f'staticClassifier forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
 
         fc1_output = self.fc1(x)
-        #batchnorm1_output = self.batchnorm1(fc1_output)
+        batchnorm1_output = self.batchnorm1(fc1_output)
         #prelu_output = self.PReLU(batchnorm1_output)
-        prelu_output = self.PReLU(fc1_output)
-        fc2_output = self.fc2(prelu_output)
+        #prelu_output = self.PReLU(fc1_output)
+        relu_output = self.LReLU(batchnorm1_output)
+        fc2_output = self.fc2(relu_output)
         score = F.softmax(fc2_output, dim=1)
+        if list(score.size())[1] != 2:
+            print(score.size())
+            exit()
         score = score[:, 0]
         return score
 
@@ -148,8 +153,10 @@ class ASRID(nn.Module):
         self.efficientNet = get_pretrained(self.num_features)
         self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.dim_attn)
 
-        #self.static_block = staticClassifier_old(in_channels=self.dim_attn)
-        self.static_block = staticClassifier(in_channels=self.dim_attn)
+        if strategy == 'old':
+            self.static_block = staticClassifier_old(in_channels=self.dim_attn)
+        else:
+            self.static_block = staticClassifier(in_channels=self.dim_attn)
         #self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn) # baseline
 
         # Other parameters

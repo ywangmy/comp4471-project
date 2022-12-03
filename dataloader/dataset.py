@@ -40,7 +40,7 @@ class DfdcDataset(Dataset):
         self.trans = trans
         self.trans_totensor = create_transforms_totensor()
         self.epoch=0
-        self.small_fit = small_fit
+        self.small_fit = True if small_fit == 1 else False
         self.next_epoch()
 
     def next_epoch(self): # only once in init

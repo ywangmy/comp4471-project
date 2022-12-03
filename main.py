@@ -88,7 +88,7 @@ def main_worker(worker_id, world_size, gpus, args, config):
     print('data configuration finish')
 
     # Load model
-    model = comp4471.model.ASRID(batch_size=batch_size).to(device)
+    model = comp4471.model.ASRID(batch_size=batch_size, strategy=config["strategy"]).to(device)
     if args.is_distributed:
         optimizer = ZeRO(params=[
             {'params': model.efficientNet.parameters()},
