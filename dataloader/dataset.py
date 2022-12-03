@@ -21,7 +21,8 @@ class DfdcDataset(Dataset):
                  fold=0,
                  folds_csv_path=None,
                  folds_json_path=None,
-                 trans=None):
+                 trans=None,
+                 small_fit=False):
         super().__init__
         self.root_dir = root_dir
         self.crops_dir = crops_dir
@@ -39,21 +40,21 @@ class DfdcDataset(Dataset):
         self.trans = trans
         self.trans_totensor = create_transforms_totensor()
         self.epoch=0
+        self.small_fit = small_fit
         self.next_epoch()
 
     def next_epoch(self): # only once in init
         """
         Called at initialization
         """
-        # k fold
-        # folds_csv = self.folds_csv
         self.data = self.folds_json[self.mode]
-        # if self.mode == 'train':
-        #     rows = folds_csv[folds_csv["fold"] != self.fold]
-        # elif self.mode == 'val':
-        #     rows = folds_csv[folds_csv["fold"] == self.fold]
-        # self.data = rows.values
-        # np.random.shuffle(self.data)
+        if self.small_fit:
+            if self.mode == 'train':
+                self.data = self.data[:128]
+            elif self.mode == 'val':
+                self.data = self.data[:32]
+            elif self.mode == 'test':
+                self.data = self.data[:32]
         self.epoch += 1
 
     def __getitem__(self, index: int):

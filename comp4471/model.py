@@ -72,8 +72,9 @@ class staticClassifier(nn.Module):
         #print(f'staticClassifier forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
 
         fc1_output = self.fc1(x)
-        batchnorm1_output = self.batchnorm1(fc1_output)
-        prelu_output = self.PReLU(batchnorm1_output)
+        #batchnorm1_output = self.batchnorm1(fc1_output)
+        #prelu_output = self.PReLU(batchnorm1_output)
+        prelu_output = self.PReLU(fc1_output)
         fc2_output = self.fc2(prelu_output)
         score = F.softmax(fc2_output, dim=1)
         score = score[:, 0]

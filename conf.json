@@ -8,4 +8,5 @@
             "schedule_policy": "Exponential"
         }
     }
+    "small_fit": True
 }
