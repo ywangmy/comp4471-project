@@ -44,7 +44,7 @@ def train_epoch(model, device, data_loader,
         if writer is not None:
             writer.add_scalar(f'His/loss', loss, start_iter+iter)
             for i, param_group in enumerate(optimizer.param_groups):
-                writer.add_scalar(f'His/lr', param_group['lr'], start_iter+iter)
+                writer.add_scalar(f'Lr/lr', param_group['lr'], start_iter+iter)
                 break
 
         optimizer.zero_grad(set_to_none=True)
@@ -53,6 +53,7 @@ def train_epoch(model, device, data_loader,
         if schedule_policy == 'Cosine': lr_scheduler.step(epoch + iter / total_iter)
         elif schedule_policy == 'Plateau': pass
         elif schedule_policy == 'OneCycle': lr_scheduler.step()
+        else: pass
 
         batch_time.update(time.time() - end)
         end = time.time()
@@ -106,13 +107,13 @@ def train_loop(state, central_gpu,
     elif schedule_policy == 'OneCycle':
         # https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.OneCycleLR
         lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=1e-6, epochs=num_epoch, steps_per_epoch=len(loader_train), last_epoch=start_iter-1, cycle_momentum=False)
+    else: lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     for epoch in range(start_epoch, start_epoch + num_epoch):
         if verbose: print(f'epoch {epoch} in progress')
 
-        loader_train.batch_sampler.sampler.set_epoch(epoch)
-        #sampler_train.set_epoch(epoch)
-        #sampler_train.dataset.next_epoch()
+        # https://murphypei.github.io/blog/2020/09/pytorch-distributed.html
+        # loader_train.batch_sampler.sampler.set_epoch(epoch) #no need
 
         start_iter = train_epoch(model=model, device=device, data_loader=loader_train,
                 verbose=verbose, writer=writer,
@@ -129,6 +130,7 @@ def train_loop(state, central_gpu,
             if schedule_policy == 'Cosine': pass
             elif schedule_policy == 'Plateau': lr_scheduler.step(metrics=metric)
             elif schedule_policy == 'OneCycle': pass
+            else: lr_scheduler.step()
 
             state.epoch = epoch + 1
             state.iter = start_iter + 1

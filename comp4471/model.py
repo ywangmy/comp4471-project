@@ -35,14 +35,32 @@ class MatNorm(nn.Module):
         x = torch.mean(x, dim=1)
         return x
 
+class staticClassifier_old(nn.Module):
+    def __init__(self, in_channels, out_channels=2):
+        super().__init__()
+        # FC as the final classification layer
+        self.fc = nn.Linear(in_channels, out_channels)
+    def forward(self, x):
+        """
+        Input:
+        - x (N, in_channels): A feature vector (attention ouput)
+        Output:
+        - score (N, out_channels=2): Static score
+        """
+        fc_output = self.fc(x)
+        relu_output = F.relu(fc_output)
+        score = F.softmax(relu_output, dim=1)
+        score = score[:, 0]
+        return score
+
 class staticClassifier(nn.Module):
     def __init__(self, in_channels, out_channels=2):
         super().__init__()
         # FC as the final classification layer
-        self.fc1 = nn.Linear(in_channels, in_channels//2)
-        self.batchnorm1 = nn.BatchNorm1d(in_channels//2)
+        self.fc1 = nn.Linear(in_channels, in_channels)
+        self.batchnorm1 = nn.BatchNorm1d(in_channels)
         self.PReLU = nn.PReLU()
-        self.fc2 = nn.Linear(in_channels//2, out_channels)
+        # self.fc2 = nn.Linear(in_channels//2, out_channels)
     def forward(self, x):
         """
         Input:
@@ -55,8 +73,8 @@ class staticClassifier(nn.Module):
 
         fc1_output = self.fc1(x)
         batchnorm1_output = self.batchnorm1(fc1_output)
-        prelu_output = self.PReLU(batchnorm1_output)
-        fc2_output = self.fc2(prelu_output)
+        #prelu_output = self.PReLU(batchnorm1_output)
+        #fc2_output = self.fc2(prelu_output)
         score = F.softmax(fc2_output, dim=1)
         score = score[:, 0]
         return score
@@ -128,6 +146,8 @@ class ASRID(nn.Module):
         # Blocks(/net/layer/model) setup
         self.efficientNet = get_pretrained(self.num_features)
         self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.dim_attn)
+
+        #self.static_block = staticClassifier_old(in_channels=self.dim_attn)
         self.static_block = staticClassifier(in_channels=self.dim_attn)
         #self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn) # baseline
 
