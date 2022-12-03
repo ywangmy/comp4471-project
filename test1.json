@@ -5,7 +5,7 @@
         "lr": 1e-6,
         "schedule": {
             "num_epoch": 30,
-            "schedule_policy": "Exponential"
+            "schedule_policy": "Plateau"
         }
     }
 }

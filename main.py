@@ -59,7 +59,7 @@ def main_worker(worker_id, world_size, gpus, args, config):
         device = gpus[worker_id]
         print(f'worker {worker_id}/{world_size} are using GPU {device}/{len(gpus)}')
         if args.is_distributed:
-            dist.init_process_group(backend='nccl', init_method='tcp://localhost:2023', world_size=world_size, rank=worker_id)
+            dist.init_process_group(backend='nccl', init_method='tcp://localhost:2024', world_size=world_size, rank=worker_id)
 
         torch.cuda.device(device)
         torch.cuda.empty_cache()
@@ -104,7 +104,7 @@ def main_worker(worker_id, world_size, gpus, args, config):
         ], lr=lr, weight_decay=weight_delay)
 
     if args.is_distributed:
-        model = nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=device)
+        model = nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=device, find_unused_parameters=True)
     print('model definition finish')
 
     # State
@@ -120,11 +120,11 @@ def main_worker(worker_id, world_size, gpus, args, config):
     # - purge_step: redo experiment from step [purge_step]
     # - comment: show the stage/usage of experiments, e.g. LR_0.1_BATCH_16
     # - log_dir: use default(runs/CURRENT_DATETIME_HOSTNAME)
-    if (args.is_distributed and worker_id == 0) or worker_id is None:
-        writer = SummaryWriter(comment = f'{args.comment}_B{batch_size}_Wdecay{weight_delay}_{schedule_policy}', purge_step=state.iter)
+    if (args.is_distributed and worker_id == 0) or not args.is_distributed:
+        writer = SummaryWriter(comment = f'LR{lr}_Wdecay{weight_delay}_{schedule_policy}_{args.comment}', purge_step=state.iter)
         layout = {
             "MyLayout": {
-                "His": ["Multiline", ["His/loss", "His/val", "His/lr"]],
+                "His": ["Multiline", ["His/loss", "His/val"]],
             },
         }
         writer.add_custom_scalars(layout)
@@ -160,21 +160,12 @@ def main():
 
     if torch.cuda.is_available() is False:
         print('No GPU found, use CPU instead')
-        main_worker(None, None, None)
+        main_worker(None, None, None, args, config)
         return
 
     # sort most available GPUs
     ngpus_per_node = torch.cuda.device_count()
     gpus = range(0, ngpus_per_node)
-    #gpus = []
-    #pynvml.nvmlInit()
-    #for i in range(0, ngpus_per_node):
-    #    h = pynvml.nvmlDeviceGetHandleByIndex(i)
-    #    info = pynvml.nvmlDeviceGetMemoryInfo(h)
-    #    print(f'GPU {i}:{info.free / 1024 ** 2} free, {info.used / 1024 ** 2} used')
-    #    gpus.append((info.free, i))
-    #gpus.sort(reverse=True)
-    #gpus = [i for capability, i in gpus ]
 
     if args.is_distributed:
         assert dist.is_available() and dist.is_nccl_available()
@@ -186,7 +177,7 @@ def main():
             torch_run = False
 
         if torch_run:
-            # option 1: use torch run
+            # option 1: use torch run (better)
             # Worker failures are handled gracefully by restarting all workers.
             main_worker(local_rank, ngpus_per_node, gpus, args, config)
         else:

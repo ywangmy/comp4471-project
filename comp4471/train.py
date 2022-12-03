@@ -38,7 +38,7 @@ def train_epoch(model, device, data_loader,
         # writer.add_images('X', X.transpose(1,2), global_step=start_iter+iter, dataformats='CHW')
         # writer.flush()
 
-        score, attn_output = model(X)
+        score, _ = model(X)
         loss = loss_func(score.view(-1, 1), y)
 
         if writer is not None:
@@ -78,8 +78,11 @@ def validate_epoch(model, device, data_loader, verbose,
             #ori_name = sample['ori']
             end = time.time()
 
-            score, attn_output = model(X)
+            score, info = model(X)
             loss = eval_func(score.view(-1, 1), y)
+
+            attn_output, score_static, score_dynamic = info
+            # TODO: output
 
             val_time.update(time.time() - end)
             losses.update(loss.item(), X.size(0))

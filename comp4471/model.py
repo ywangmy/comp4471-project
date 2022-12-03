@@ -8,9 +8,9 @@ from .MAT import SelfAttention
 import math
 
 def get_pretrained(num_classes = 1000, download = False):
-    # https://pytorch.org/vision/stable/models/generated/torchvision.models.efficientnet_v2_s.html#torchvision.models.efficientnet_v2_s
+    # Accepts PIL.Image, batched (B, C, H, W) and single (C, H, W) image torch.Tensor objects
+    # https://pytorch.org/vision/stable/models/generated/torchvision.models.mobilenet_v3_small
     if num_classes == 1000:
-        # model = torchvision.models.resnet18(weights='DEFAULT', progress=True)
         model = torchvision.models.mobilenet_v3_small(weights='DEFAULT', download=download, progress=True)
     else:
         model = torchvision.models.mobilenet_v3_small(weights=None)
@@ -60,7 +60,7 @@ class staticClassifier(nn.Module):
         self.fc1 = nn.Linear(in_channels, in_channels)
         self.batchnorm1 = nn.BatchNorm1d(in_channels)
         self.PReLU = nn.PReLU()
-        # self.fc2 = nn.Linear(in_channels//2, out_channels)
+        self.fc2 = nn.Linear(in_channels, out_channels)
     def forward(self, x):
         """
         Input:
@@ -73,8 +73,8 @@ class staticClassifier(nn.Module):
 
         fc1_output = self.fc1(x)
         batchnorm1_output = self.batchnorm1(fc1_output)
-        #prelu_output = self.PReLU(batchnorm1_output)
-        #fc2_output = self.fc2(prelu_output)
+        prelu_output = self.PReLU(batchnorm1_output)
+        fc2_output = self.fc2(prelu_output)
         score = F.softmax(fc2_output, dim=1)
         score = score[:, 0]
         return score
@@ -134,7 +134,7 @@ class dynamicClassifier(nn.Module):
         return score
 
 class ASRID(nn.Module):
-    def __init__(self, batch_size, num_frames=1, num_features=1000, num_heads=10, dim_attn=1000):
+    def __init__(self, batch_size, num_frames=1, num_features=1000, num_heads=10, dim_attn=1000, strategy=None):
         super().__init__()
         # Parameters setup
         self.batch_size = batch_size
@@ -163,31 +163,30 @@ class ASRID(nn.Module):
         - score (N, ): Score
         """
         # Change x: (N, F, ...) to x: (N * F, ...)
+        N, F, C, H, W = x.size()
         #print(f'x.size()={x.size()}, type={x.type()}')
-        N, F, C, H, W = list(x.size())
         #x_imgs = torch.reshape(x, (-1, C, H, W))
-
         #print(f'main forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
 
-        # Feature output (N, num_features)
+        # Feature output (N, F, num_features)
         feat_output = torch.stack([self.efficientNet(img) for img in x])
         #print(f'feat_output.size()={feat_output.size()}')
 
         # Attention output (N, F, dim_attn)
+        # Attention output weight .
         attn_results = [self.multiattn_block(feat) for feat in feat_output]
         attn_output = torch.stack([output for output, _ in attn_results])
         attn_output_weights = torch.stack([output_weight for _, output_weight in attn_results])
-
         #print(f'attn_output.size()={attn_output.size()}')
+
         # Static scores (N, F)
         score_static_s = torch.stack([self.static_block(attn) for attn in attn_output])
+
         # Mean static scores (N,)
         score_static = score_static_s.mean(dim=1)
+
         # Dynamic scores (N,)
         #score_dynamic = self.dynamic_block(attn_output)
+
         score = self.w_static * score_static #+ (1. - self.w_static) * score_dynamic
-        return score, attn_output
-
-
-
-
+        return score, (attn_output, score_static, score_static) # TODO: change into dynamic
