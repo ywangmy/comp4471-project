@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 from tqdm import tqdm
 import pynvml
+import shutil
 from omegaconf import OmegaConf
 
 import torch
@@ -92,7 +93,7 @@ def main_worker(worker_id, world_size, gpus, cfg):
         writer = SummaryWriter(log_dir = cfg['experiment']['board_dir'], purge_step=state.iter)
         layout = {
             "OverfitLayout": {
-                "Overfit": ["Multiline", ["His/val", "His/avgloss"]],
+                cfg['experiment']['exp_fullname']: ["Multiline", ["His/val", "His/avgloss"]],
             },
         }
         writer.add_custom_scalars(layout)
@@ -100,7 +101,7 @@ def main_worker(worker_id, world_size, gpus, cfg):
         # backup config file
         try:
             os.makedirs(cfg['experiment']['board_dir'], exist_ok=True)
-            shutil.copyfile(cfg.conf_file, os.path.join(cfg['experiment']['board_dir'],'conf_backup.json'))
+            shutil.copyfile(cfg.conf_file, os.path.join(cfg['experiment']['board_dir'],'conf_backup.yaml'))
         except:
             pass
     else:
@@ -128,9 +129,7 @@ def main(cfg: OmegaConf):
         pass
     OmegaConf.resolve(cfg)
     OmegaConf.set_readonly(cfg, True)
-    # print(OmegaConf.to_yaml(cfg))
-
-    comp4471.util.setup_seed(cfg['experiment']['seed'])
+    comp4471.util.setup_seed(OmegaConf.to_yaml(cfg))
 
     if torch.cuda.is_available() is False:
         print('No GPU found, use CPU instead')

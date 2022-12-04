@@ -3,6 +3,7 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as Func
 import numpy as np
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from .MAT import SelfAttention
 
 import math
@@ -28,7 +29,7 @@ class MatNorm(nn.Module):
         - x: Dynamic score
         """
         #N, F, C, H, W = x.shape
-        N, D = list(x.size())
+        N, F, D = list(x.size())
         x = torch.linalg.matrix_norm(x) # https://pytorch.org/docs/stable/generated/torch.linalg.matrix_norm.html#torch.linalg.matrix_norm
         x = torch.diff(x, dim=0) # https://pytorch.org/docs/stable/generated/torch.diff.html?highlight=diff#torch.diff
         x = torch.abs(x)
@@ -84,23 +85,23 @@ class PositionalEncoding(nn.Module):
     """
     Positional encoding.
     """
-    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 2048):
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len=64):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
-        #position = torch.arange(max_len).unsqueeze(1)
-        #div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        #pe = torch.zeros(max_len, 1, d_model)
-        #pe[0, :, 0::2] = torch.sin(position * div_term)
-        #pe[0, :, 1::2] = torch.cos(position * div_term)
-        #self.register_buffer('pe', pe)
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(1, max_len, d_model)
+        pe[0, :, 0::2] = torch.sin(position * div_term)
+        pe[0, :, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
 
     def forward(self, x):
         """
         x: shape [batch_size, seq_len, dim_embed(d_model)]
         """
-        x = x + self.pe[:x.shape[1]]
-        return self.dropout(X)
+        x = x + self.pe[:, :x.size(dim=1), :]
+        return self.dropout(x)
 
 class dynamicClassifier(nn.Module):
     """
@@ -111,26 +112,27 @@ class dynamicClassifier(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.dropout = dropout
-        #self.pos_encoder = PositionalEncoding(in_channels, dropout)
-        #encoder_layers = TransformerEncoderLayer(in_channels, nhead, d_hid, dropout)
-        #self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        #self.encoder = nn.Embedding(ntoken, d_model)
+        self.pos_encoder = PositionalEncoding(in_channels, dropout)
+        encoder_layers = TransformerEncoderLayer(in_channels, nhead, d_hid, dropout, batch_first=True)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+        #self.encoder = nn.Embedding(out_channels, d_model)
         self.fc = nn.Linear(in_channels, out_channels)
         self.init_weights()
     def init_weights(self) -> None:
         initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-initrange, initrange)
+        #self.encoder.weight.data.uniform_(-initrange, initrange)
+        self.fc.bias.data.zero_()
+        self.fc.weight.data.uniform_(-initrange, initrange)
     def forward(self, x):
         """
         x: shape [batch_size, seq_len, dim_embed]
         """
-        x = self.encoder(x) * math.sqrt(self.in_channels)
+        #x = self.encoder(x) * math.sqrt(self.in_channels)
         x = self.pos_encoder(x)
-        tr_output = self.transformer_encoder(src)
+        tr_output = self.transformer_encoder(x)
         fc_output = self.fc(tr_output)
-        score = Func.softmax(fc_output, dim=2)
+        score = torch.mean(fc_output, dim=1)
+        score = Func.softmax(score, dim=1)
         score = score[:, 0]
         return score
 
@@ -148,15 +150,15 @@ class ASRID(nn.Module):
         self.efficientNet = get_pretrained(self.num_features)
         self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.dim_attn)
 
-        if strategy == 'old':
+        if strategy == 'static_old':
             self.static_block = staticClassifier_old(in_channels=self.dim_attn)
-        else:
+        elif strategy == 'static_new':
             self.static_block = staticClassifier(in_channels=self.dim_attn)
-        #self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn) # baseline
+        self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn) # baseline
 
         # Other parameters
         # self.w_static = torch.rand((1,))
-        self.w_static = 1.
+        self.w_static = 0.9
 
     def forward(self, x):
         """
@@ -190,7 +192,7 @@ class ASRID(nn.Module):
         score_static = score_static_s.mean(dim=1)
 
         # Dynamic scores (N,)
-        #score_dynamic = self.dynamic_block(attn_output)
+        score_dynamic = self.dynamic_block(attn_output)
 
-        score = self.w_static * score_static #+ (1. - self.w_static) * score_dynamic
+        score = self.w_static * score_static + (1. - self.w_static) * score_dynamic
         return score, (attn_output, score_static, score_static) # TODO: change into dynamic
