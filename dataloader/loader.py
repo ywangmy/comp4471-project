@@ -17,7 +17,7 @@ def configure_data(cfg):
                             folds_csv_path=cfg['dataset']['folds_csv_path'],
                             folds_json_path=cfg['dataset']['folds_json_path'],
                             trans=trans_train,
-                            small_fit=config['small_fit'])
+                            small_fit=cfg['dataset']['small_fit'])
     data_val = DfdcDataset(mode='val',
                         root_dir=cfg['dataset']['root_dir'],
                         crops_dir=cfg['dataset']['crops_dir'],
@@ -25,7 +25,7 @@ def configure_data(cfg):
                         folds_csv_path=cfg['dataset']['folds_csv_path'],
                         folds_json_path=cfg['dataset']['folds_json_path'],
                         trans=trans_val,
-                        small_fit=config['small_fit'])
+                        small_fit=cfg['dataset']['small_fit'])
 
     # Sampler
     if cfg['distributed']['toggle']:

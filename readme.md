@@ -1,12 +1,13 @@
 # About
 Group project of COMP4471@HKUST in 2022 Fall.
 
-# Run
+# Training
 In the root directory of project.
 
 ## Single processing mode:
+Turn off the distributed.toggle in conf.yaml
 ```bash
-CUDA_VISIBLE_DEVICES=3 python main.py --config './expr1/run1.json' --ckpt_path './expr1/run1_ckpt.pth.tar' --board_path './expr1/runs/run1'
+CUDA_VISIBLE_DEVICES=3 python main.py conf_file=conf.yaml
 ```
 
 ## Distributed mode
@@ -15,11 +16,11 @@ FYI: batch size of 6 needs 10GB GPU memory
 
 1. torchrun
     ```bash
-    CUDA_VISIBLE_DEVICES=1,2 torchrun --standalone --nnodes=1 --nproc_per_node=2 main.py --is-distributed --ckpt_path './ckpt/baseline.pth.tar' --comment baseline
+    CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nnodes=1 --nproc_per_node=4 main.py conf_file=conf.yaml
     ```
 2. or torch multiprocessing spawn (not recommended because of termination messy)
     ```bash
-    python main.py --is-distributed --gpu-workers 4 --ckpt_path './ckpt/baseline.pth.tar' --comment comment_for_tensorboard
+    CUDA_VISIBLE_DEVICES=1,3 python main.py conf_file=conf.yaml
     ```
 
 For other arguments:
@@ -29,8 +30,8 @@ For other arguments:
 # Tensorboard
 To **visualize**(in the root directory of project):
 `pip install tensorboard`
-`tensorboard --logdir=runs`
-open the link given in the browser
+`tensorboard --logdir=exps`
+then open the given link from terminal in the browser
 
 # Implementation Reference
 https://github.com/selimsef/dfdc_deepfake_challenge

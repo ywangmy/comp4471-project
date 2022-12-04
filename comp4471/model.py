@@ -1,7 +1,7 @@
 import torch
 import torchvision
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as Func
 import numpy as np
 from .MAT import SelfAttention
 
@@ -48,42 +48,37 @@ class staticClassifier_old(nn.Module):
         - score (N, out_channels=2): Static score
         """
         fc_output = self.fc(x)
-        relu_output = F.relu(fc_output)
-        score = F.softmax(relu_output, dim=1)
+        relu_output = Func.relu(fc_output)
+        score = Func.softmax(relu_output, dim=1)
         score = score[:, 0]
         return score
 
 class staticClassifier(nn.Module):
-    def __init__(self, in_channels, out_channels=2):
+    def __init__(self, in_channels, out_channels=4):
         super().__init__()
         # FC as the final classification layer
-        self.fc1 = nn.Linear(in_channels, in_channels)
-        self.batchnorm1 = nn.BatchNorm1d(in_channels)
+        self.fc1 = nn.Linear(in_channels, in_channels//4)
+        self.batchnorm1 = nn.BatchNorm1d(in_channels//4)
         self.PReLU = nn.PReLU()
-        self.LReLU = nn.LeakyReLU()
-        self.fc2 = nn.Linear(in_channels, out_channels)
+        self.fc2 = nn.Linear(in_channels//4, out_channels)
+
     def forward(self, x):
         """
         Input:
-        - x (N, in_channels): A feature vector (attention output)
+        - x (N, F, in_channels): A feature vector (attention output)
         Output:
-        - score (N, ): Static score
+        - score (N, F): Static score
         """
 
         #print(f'staticClassifier forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
 
+        N, F, in_channels = x.shape
         fc1_output = self.fc1(x)
-        batchnorm1_output = self.batchnorm1(fc1_output)
-        #prelu_output = self.PReLU(batchnorm1_output)
-        #prelu_output = self.PReLU(fc1_output)
-        relu_output = self.LReLU(batchnorm1_output)
-        fc2_output = self.fc2(relu_output)
-        score = F.softmax(fc2_output, dim=1)
-        if list(score.size())[1] != 2:
-            print(score.size())
-            exit()
-        score = score[:, 0]
-        return score
+        batchnorm1_output = self.batchnorm1(fc1_output.view(N * F, -1)).view(N, F, -1)
+        prelu_output = self.PReLU(batchnorm1_output)
+        fc2_output = self.fc2(prelu_output)
+        score = Func.softmax(fc2_output, dim=2)
+        return score[:, :, 0]
 
 class PositionalEncoding(nn.Module):
     """
@@ -135,7 +130,7 @@ class dynamicClassifier(nn.Module):
         x = self.pos_encoder(x)
         tr_output = self.transformer_encoder(src)
         fc_output = self.fc(tr_output)
-        score = F.softmax(fc_output, dim=2)
+        score = Func.softmax(fc_output, dim=2)
         score = score[:, 0]
         return score
 
@@ -181,14 +176,15 @@ class ASRID(nn.Module):
         #print(f'feat_output.size()={feat_output.size()}')
 
         # Attention output (N, F, dim_attn)
-        # Attention output weight .
+        # Attention output weight ....
         attn_results = [self.multiattn_block(feat) for feat in feat_output]
         attn_output = torch.stack([output for output, _ in attn_results])
         attn_output_weights = torch.stack([output_weight for _, output_weight in attn_results])
         #print(f'attn_output.size()={attn_output.size()}')
 
         # Static scores (N, F)
-        score_static_s = torch.stack([self.static_block(attn) for attn in attn_output])
+        # score_static_s = torch.stack([self.static_block(attn) for attn in attn_output])
+        score_static_s = self.static_block(attn_output)
 
         # Mean static scores (N,)
         score_static = score_static_s.mean(dim=1)

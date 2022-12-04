@@ -4,6 +4,8 @@ from omegaconf import OmegaConf
 def main(conf: OmegaConf):
     try:
         conf = OmegaConf.merge(conf, OmegaConf.load(conf.conf_file))
+    except:
+        pass
     OmegaConf.set_readonly(conf, True)
     print(OmegaConf.to_yaml(conf))
 

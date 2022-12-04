@@ -48,9 +48,9 @@ def main_worker(worker_id, world_size, gpus, cfg):
         comp4471.model.get_pretrained()
 
     # Resume
-    lr = config['optimizer']['lr']
-    weight_delay = config['optimizer']['weight_decay']
-    batch_size = config['optimizer']['batch_size']
+    lr = cfg['optimizer']['lr']
+    weight_delay = cfg['optimizer']['weight_decay']
+    batch_size = cfg['optimizer']['batch_size']
 
     # Configure data
     root_path = os.path.dirname(__file__)
@@ -74,7 +74,7 @@ def main_worker(worker_id, world_size, gpus, cfg):
         ], lr=lr, weight_decay=weight_delay)
 
     if is_distributed:
-        model = nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=device, find_unused_parameters=True)
+        model = nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=device, find_unused_parameters=False)
     print('model definition finish')
 
     # State
@@ -91,21 +91,28 @@ def main_worker(worker_id, world_size, gpus, cfg):
     if (is_distributed and worker_id == 0) or not is_distributed:
         writer = SummaryWriter(log_dir = cfg['experiment']['board_dir'], purge_step=state.iter)
         layout = {
-            "MyLayout": {
-                "His": ["Multiline", ["His/loss", "His/val"]],
+            "OverfitLayout": {
+                "Overfit": ["Multiline", ["His/val", "His/avgloss"]],
             },
         }
         writer.add_custom_scalars(layout)
+
+        # backup config file
+        try:
+            os.makedirs(cfg['experiment']['board_dir'], exist_ok=True)
+            shutil.copyfile(cfg.conf_file, os.path.join(cfg['experiment']['board_dir'],'conf_backup.json'))
+        except:
+            pass
     else:
         writer = None
     print('writer ready')
 
     train_loop(state, central_gpu=gpus[0] if worker_id!=None else device,
-        model=model, num_epoch=cfg['schedule']['num_epoch'], device=device, writer=writer,
+        model=model, device=device, writer=writer,
         loader_train=loader_train, loader_val=loader_val,
-        optimizer=optimizer, schedule_policy=cfg['schedule']['schedule_policy'],
+        optimizer=optimizer,
         loss_func=loss.twoPhaseLoss(phase=1).to(device), eval_func=loss.evalLoss().to(device),
-        is_distributed=is_distributed, phase=1)
+        cfg=cfg)
 
     # clean up
     # torch.cuda.empty_cache()
@@ -117,9 +124,11 @@ def main(cfg: OmegaConf):
     # https://omegaconf.readthedocs.io/en/2.2_branch/usage.html
     try:
         cfg = OmegaConf.merge(cfg, OmegaConf.load(cfg.conf_file)) # merge with config file content
-    OmegaConf.set_readonly(cfg, True)
+    except:
+        pass
     OmegaConf.resolve(cfg)
-    print(OmegaConf.to_yaml(cfg))
+    OmegaConf.set_readonly(cfg, True)
+    # print(OmegaConf.to_yaml(cfg))
 
     comp4471.util.setup_seed(cfg['experiment']['seed'])
 
