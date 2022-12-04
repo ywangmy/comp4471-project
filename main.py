@@ -58,7 +58,7 @@ def main_worker(worker_id, world_size, gpus, cfg):
     print('data configuration finish')
 
     # Load model
-    model = comp4471.model.ASRID(batch_size=batch_size).to(device)
+    model = comp4471.model.ASRID(batch_size=batch_size, strategy=cfg["strategy"]).to(device)
     if is_distributed:
         optimizer = ZeRO(params=[
             {'params': model.efficientNet.parameters()},
@@ -108,7 +108,8 @@ def main_worker(worker_id, world_size, gpus, cfg):
         is_distributed=is_distributed, phase=1)
 
     # clean up
-    torch.cuda.empty_cache()
+    # torch.cuda.empty_cache()
+    # https://discuss.pytorch.org/t/out-of-memory-when-i-use-torch-cuda-empty-cache/57898
     dist.destroy_process_group()
 
 @record
