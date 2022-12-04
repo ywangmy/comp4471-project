@@ -149,7 +149,7 @@ def main_worker(worker_id, world_size, gpus, args, config):
     #    start_iter=start_iter) # kwargs
 
     # clean up
-    torch.cuda.empty_cache()
+    # torch.cuda.empty_cache() # https://discuss.pytorch.org/t/out-of-memory-when-i-use-torch-cuda-empty-cache/57898
     dist.destroy_process_group()
 
 @record
