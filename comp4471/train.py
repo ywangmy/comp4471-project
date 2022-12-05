@@ -112,7 +112,7 @@ def train_loop(state, central_gpu,
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2, threshold=0.05, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08, verbose=True)
     elif schedule_policy == 'OneCycle':
         # https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.OneCycleLR
-        lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=cfg['schedule']['max_lr'], epochs=num_epoch, steps_per_epoch=len(loader_train), last_epoch=start_iter-1, cycle_momentum=False)
+        lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=cfg['optimizer']['lr'], epochs=num_epoch, steps_per_epoch=len(loader_train), last_epoch=start_iter-1, cycle_momentum=False)
     else: lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     for epoch in range(start_epoch, start_epoch + num_epoch):
@@ -142,5 +142,5 @@ def train_loop(state, central_gpu,
             state.save(metric=metric)
 
             if verbose: print(f'train = {metric_train}, eval = {metric}')
-            writer.add_scalar(f'His/avgloss', metric_train, start_iter-1)
-            writer.add_scalar(f'His/val', metric, start_iter-1)
+            writer.add_scalar(f'His/avgloss', metric_train, epoch)
+            writer.add_scalar(f'His/val', metric, epoch)

@@ -1,6 +1,6 @@
 experiment:
-  exp_name: dynamic
-  exp_comment: Wdecay_LR6_Plateau_L
+  exp_name: dynamic_095_largerData
+  exp_comment: Wdecay_LR3_Plateau_L
   exp_fullname: ${.exp_name}_${.exp_comment}
   ckpt_path: ./exps/${.exp_name}/${.exp_comment}/ckpt.pth.tar # load from *.best, save to *
   board_dir: ./exps/${.exp_name}/${.exp_comment}
@@ -11,7 +11,7 @@ strategy: static_new
 optimizer:
   batch_size: 6
   weight_decay: 5e-3
-  lr: 1e-6  # for OneCycle and Cosine, this is the max_lr
+  lr: 1e-3  # for OneCycle and Cosine, this is the max_lr
 
 schedule:
   num_epoch: 100

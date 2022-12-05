@@ -50,8 +50,8 @@ class State:
             print(f"=> best model found at epoch {self.epoch} saved to {best_filename}")
 
     def load(self, device, filename=None):
-        if filename is None: filename = self.ckpt_path
-        if os.path.isfile(self.ckpt_path) is False: return
+        if filename is None: filename = self.ckpt_path+".best"
+        if os.path.isfile(filename) is False: return
         # Map model to be loaded to specified single gpu.
         self.apply_snapshot(torch.load(filename, map_location=device))
         print(f'ckpt found, start with epoch={self.epoch}, iter={self.iter}, min={self.min}')
