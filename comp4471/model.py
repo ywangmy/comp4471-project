@@ -151,10 +151,10 @@ class ASRID(nn.Module):
         self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.dim_attn)
 
         if strategy == 'static_old':
-            self.static_block = staticClassifier_old(in_channels=self.dim_attn)
+            self.static_block = staticClassifier_old(in_channels=self.dim_attn + self.num_features)
         elif strategy == 'static_new':
-            self.static_block = staticClassifier(in_channels=self.dim_attn)
-        self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn) # baseline
+            self.static_block = staticClassifier(in_channels=self.dim_attn + self.num_features)
+        self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn + self.num_features) # baseline
 
         # Other parameters
         # self.w_static = torch.rand((1,))
@@ -184,15 +184,18 @@ class ASRID(nn.Module):
         attn_output_weights = torch.stack([output_weight for _, output_weight in attn_results])
         #print(f'attn_output.size()={attn_output.size()}')
 
+        # Mixed output
+        mixed_output = torch.cat((feat_output, attn_output), dim=2)
+
         # Static scores (N, F)
         # score_static_s = torch.stack([self.static_block(attn) for attn in attn_output])
-        score_static_s = self.static_block(attn_output)
+        score_static_s = self.static_block(mixed_output)
 
         # Mean static scores (N,)
         score_static = score_static_s.mean(dim=1)
 
         # Dynamic scores (N,)
-        score_dynamic = self.dynamic_block(attn_output)
+        score_dynamic = self.dynamic_block(mixed_output)
 
         score = self.w_static * score_static + (1. - self.w_static) * score_dynamic
         return score, (attn_output, score_static, score_static) # TODO: change into dynamic
