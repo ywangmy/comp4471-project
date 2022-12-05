@@ -25,9 +25,9 @@ import numpy as np
 detector = MTCNN(margin=0, thresholds=[0.65, 0.75, 0.75], device="cpu")
 
 
-def save_landmarks(ori_id, video_dir):
+def save_landmarks(ori_id, video_dir, crops_dir):
     ori_id = ori_id[:-4]
-    ori_dir = os.path.join(video_dir, "crops", ori_id)
+    ori_dir = os.path.join(video_dir, crops_dir, ori_id)
     landmark_dir = os.path.join(video_dir, "landmarks", ori_id)
     os.makedirs(landmark_dir, exist_ok=True)
     for frame in range(320):
@@ -56,6 +56,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Extract image landmarks")
     parser.add_argument("--video-dir", help="video directory", default="/mnt/sota/datasets/deepfake")
+    parser.add_argument("--crops-dir", help="crops directory")
     args = parser.parse_args()
     return args
 
@@ -66,7 +67,7 @@ def main():
     os.makedirs(os.path.join(args.video_dir, "landmarks"), exist_ok=True)
     with Pool(processes=os.cpu_count()) as p:
         with tqdm(total=len(ids)) as pbar:
-            func = partial(save_landmarks, video_dir=args.video_dir)
+            func = partial(save_landmarks, video_dir=args.video_dir, crops_dir=args.crops_dir)
             for v in p.imap_unordered(func, ids):
                 pbar.update()
 

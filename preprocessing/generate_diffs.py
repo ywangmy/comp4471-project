@@ -23,10 +23,10 @@ import numpy as np
 cache = {}
 
 
-def save_diffs(pair, video_dir):
+def save_diffs(pair, video_dir, crops_dir):
     ori_id, fake_id = pair
-    ori_dir = os.path.join(video_dir, "crops", ori_id)
-    fake_dir = os.path.join(video_dir, "crops", fake_id)
+    ori_dir = os.path.join(video_dir, crops_dir, ori_id)
+    fake_dir = os.path.join(video_dir, crops_dir, fake_id)
     diff_dir = os.path.join(video_dir, "diffs", fake_id)
     os.makedirs(diff_dir, exist_ok=True)
     for frame in range(320):
@@ -54,6 +54,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Extract image diffs")
     parser.add_argument("--video-dir", help="video directory", default="/mnt/sota/datasets/deepfake")
+    parser.add_argument("--crops-dir", help="crops directory")
     args = parser.parse_args()
     return args
 
@@ -64,7 +65,7 @@ def main():
     os.makedirs(os.path.join(args.video_dir, "diffs"), exist_ok=True)
     with Pool(processes=os.cpu_count() - 2) as p:
         with tqdm(total=len(pairs)) as pbar:
-            func = partial(save_diffs, video_dir=args.video_dir)
+            func = partial(save_diffs, video_dir=args.video_dir, crops_dir=args.crops_dir)
             for v in p.imap_unordered(func, pairs):
                 pbar.update()
 

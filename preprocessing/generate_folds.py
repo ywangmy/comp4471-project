@@ -21,12 +21,12 @@ import cv2
 cv2.ocl.setUseOpenCL(False)
 cv2.setNumThreads(0)
 
-def get_frames(video_name, root_dir):
+def get_frames(video_name, root_dir, crops_dir):
     frames = []
     for frame in range(0, 320, 10):
         for actor in range(2):
             image_id = "{}_{}.png".format(frame, actor)
-            img_path = os.path.join(root_dir, 'crops', video_name, image_id)
+            img_path = os.path.join(root_dir, crops_dir, video_name, image_id)
             if os.path.exists(img_path):
                 frames.append(image_id)
     if len(frames) > 30:
@@ -37,6 +37,8 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Generate Folds")
     parser.add_argument("--root-dir", help="video directory", default="data/")
+    parser.add_argument("--crops-dir", help="crops directory")
+    parser.add_argument("--out", help="output file")
     parser.add_argument("--seed", type=int, default=777, help="Seed to split, default 777")
     args = parser.parse_args()
 
@@ -78,7 +80,7 @@ def main():
     json_val = []
     json_test = []
     for video_name, (label, ori) in tqdm(video_list_all):
-        frames = get_frames(video_name, args.root_dir)
+        frames = get_frames(video_name, args.root_dir, args.crops_dir)
         if len(frames) != 30:
             continue
         cnt_video += 1
@@ -108,7 +110,7 @@ def main():
                 json_test.append(entry)
     """
     json_all = {'train': json_train, 'val': json_val, 'test': json_test}
-    with open("folds.json", "w") as outfile:
+    with open(args.out, "w") as outfile:
         json.dump(json_all, outfile)
     print(f'train: {len(json_train)}, val: {len(json_val)}, test: {len(json_test)}')
 

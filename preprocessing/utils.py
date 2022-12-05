@@ -36,6 +36,7 @@ def get_real_video_paths(video_dir, basename=False):
 def get_real_with_fakes(video_dir):
     pairs = []
     for json_path in glob(os.path.join(video_dir, "*/metadata.json")):
+        dir = Path(json_path).parent # dfdc_train_part_i
         with open(json_path, "r") as f:
             metadata = json.load(f)
         for k, v in metadata.items():
