@@ -184,8 +184,10 @@ class ASRID(nn.Module):
         attn_output_weights = torch.stack([output_weight for _, output_weight in attn_results])
         #print(f'attn_output.size()={attn_output.size()}')
 
-        # Mixed output
+        # Mixed output (N, F, dim_attn + num_features)
         mixed_output = torch.cat((feat_output, attn_output), dim=2)
+        mixed_output = torch.sign(mixed_output) * torch.sqrt(torch.abs(mixed_output) + 1e-12)
+        mixed_output = F.normalize(mixed_output, dim=-1)
 
         # Static scores (N, F)
         # score_static_s = torch.stack([self.static_block(attn) for attn in attn_output])
