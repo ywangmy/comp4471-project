@@ -1,4 +1,26 @@
 from typing import List, Tuple
+import random
+import numpy as np
+
+import torch
+
+# Pearson hashing
+def hash8(message: str, table = list(range(0, 256)) ) -> int:
+    """Pearson hashing."""
+    hash = len(message) % 256
+    for i in message:
+        hash = table[hash ^ ord(i)]
+    return hash
+def setup_seed(string):
+    seed = hash8(string)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    # https://zhuanlan.zhihu.com/p/73711222
+
 class AverageMeter(object):
     """Computes and stores the average and current value"""
 

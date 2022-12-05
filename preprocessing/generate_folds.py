@@ -29,6 +29,8 @@ def get_frames(video_name, root_dir):
             img_path = os.path.join(root_dir, 'crops', video_name, image_id)
             if os.path.exists(img_path):
                 frames.append(image_id)
+    if len(frames) > 30:
+        frames = frames[:30]
     return frames
 
 def parse_args():

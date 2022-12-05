@@ -1,0 +1,40 @@
+experiment:
+  exp_name: static
+  exp_id: 0
+  ckpt_path: ./exps/${.exp_name}/ckpt${.exp_id}.pth.tar
+  board_dir: ./exps/${.exp_name}/ckpt${.exp_id}
+  seed: 4471
+
+strategy: new
+
+optimizer:
+  batch_size: 6
+  weight_decay: 0.001
+  lr: 1e-6
+
+schedule:
+  num_epoch: 100
+  schedule_policy: OneCycle # Cosine, Plateau, OneCycle, Exponential
+  max_lr: 1e-5 # for OneCycle only
+  verbose: True
+  val_freq: 1
+  phase: 1
+
+distributed:
+  toggle: True
+  gpu_workers: 4 # spawn mode only
+  server:
+    host: localhost
+    port: 4471
+    url: 'tcp://${.host}:${.port}'
+
+dataset:
+  small_fit: 1 # 1 for True, 0 for False
+  size: 380
+  fold: 0
+  folds_csv_path: folds.csv
+  folds_json_path: folds.json
+  root_dir: data/
+  crops_dir: crops
+  output_dir: weights/
+  load_workers: 1
