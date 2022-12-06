@@ -1,11 +1,11 @@
 experiment:
-  exp_name: static_new
-  exp_comment: Wdecay53_LR8_OneCycle_L
+  exp_name: dynamic_nomix_str08_smallFit
+  exp_comment: Wdecay_LR6_Exponential
   exp_fullname: ${.exp_name}_${.exp_comment}
   ckpt_path: ./exps/${.exp_name}/${.exp_comment}/ckpt.pth.tar # load from *.best, save to *
   board_dir: ./exps/${.exp_name}/${.exp_comment}
 
-strategy: static_new
+strategy: dynamic_mix
 # static_old, static_new, static_mix, dynamic_mix
 
 optimizer:
@@ -18,6 +18,7 @@ schedule:
   schedule_policy: OneCycle # Cosine, Plateau, OneCycle, Exponential
   verbose: True
   val_freq: 1
+  test_only: True
 
 distributed:
   toggle: False

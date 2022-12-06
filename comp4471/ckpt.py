@@ -20,12 +20,13 @@ class State:
             "optimizer": self.optimizer.state_dict(),
         }
 
-    def apply_snapshot(self, obj):
+    def apply_snapshot(self, obj, load_optim):
         self.epoch = obj["epoch"]
         self.iter = obj["iter"]
         self.min = obj["min"]
         self.model.load_state_dict(obj["state_dict"])
-        self.optimizer.load_state_dict(obj["optimizer"])
+        if load_optim:
+            self.optimizer.load_state_dict(obj["optimizer"])
 
     def save(self, metric=None, filename=None):
         if filename is None: filename = self.ckpt_path
@@ -49,9 +50,9 @@ class State:
             shutil.copyfile(filename, best_filename)
             print(f"=> best model found at epoch {self.epoch} saved to {best_filename}")
 
-    def load(self, device, filename=None):
+    def load(self, device, filename=None, load_optim=True):
         if filename is None: filename = self.ckpt_path+".best"
         if os.path.isfile(filename) is False: return
         # Map model to be loaded to specified single gpu.
-        self.apply_snapshot(torch.load(filename, map_location=device))
+        self.apply_snapshot(torch.load(filename, map_location=device), load_optim)
         print(f'ckpt found, start with epoch={self.epoch}, iter={self.iter}, min={self.min}')

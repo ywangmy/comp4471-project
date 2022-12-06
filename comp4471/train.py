@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
+from torchmetrics.classification import BinaryRecall, BinaryAccuracy
 
 from datetime import timedelta
 import time
@@ -67,31 +68,44 @@ def train_epoch(model, device, data_loader,
 
 def validate_epoch(model, device, data_loader, verbose,
                 eval_func, **kwargs):
-    model.eval()
+    # Keyword arguments:
+    show_every = kwargs.get('show_every', 10)
     losses = AverageMeter("Loss", ":.4e")
-    val_time = AverageMeter("Time", ":6.3f")
+    recalles = AverageMeter("Recall", ":.4e")
+    acces = AverageMeter("Acc", ":.4e")
     progress = ProgressMeter(
         len(data_loader),
-        [losses, val_time],
+        [losses, recalles, acces],
     )
+
+    Recall = BinaryRecall().to(device)
+    Acc = BinaryAccuracy().to(device)
+    model.eval()
     with torch.no_grad():
         for iter, sample in enumerate(data_loader):
             X = sample["video"].float().to(device, non_blocking=True)
             y = sample["label"].float().to(device, non_blocking=True)
             #video_name = sample['video_name']
             #ori_name = sample['ori']
-            end = time.time()
 
             score, info = model(X)
-            loss = eval_func(score.view(-1, 1), y)
+            score = score.view(-1, 1)
+            # attn_output, score_static, score_dynamic = info
+            loss = eval_func(score, y)
 
-            attn_output, score_static, score_dynamic = info
-            # TODO: output
+            #if iter == 0:
+            #    print(score)
+            #    print(y)
 
-            val_time.update(time.time() - end)
+            recall = Recall(score, y)
+            acc = Acc(score, y)
+
             losses.update(loss.item(), X.size(0))
-            if iter + 1 == len(data_loader): print(progress.display(0))
-        return losses.avg
+            recalles.update(recall.item(), X.size(0))
+            acces.update(acc.item(), X.size(0))
+            if (iter == 0 or iter % show_every == 0) and verbose:
+                print(progress.display(iter))
+        return losses.avg, (recalles.avg, acces.avg)
 
 def train_loop(state, central_gpu,
             model, device, writer,
@@ -132,7 +146,7 @@ def train_loop(state, central_gpu,
             optimizer.consolidate_state_dict(to=central_gpu) # send state_dict to worker 0
 
         if epoch % cfg['schedule']['val_freq'] == 0 and writer is not None: # holder of writer means worker 0
-            metric = validate_epoch(model=model, device=device, data_loader=loader_val, verbose=verbose, eval_func=eval_func, kwargs=kwargs)
+            metric, _ = validate_epoch(model=model, device=device, data_loader=loader_val, verbose=verbose, eval_func=eval_func, kwargs=kwargs)
 
             if schedule_policy == 'Cosine': pass
             elif schedule_policy == 'Plateau': lr_scheduler.step(metrics=metric)

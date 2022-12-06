@@ -19,8 +19,8 @@ from torch.distributed.elastic.multiprocessing.errors import record
 from torch.utils.tensorboard import SummaryWriter
 
 from comp4471 import loss
-from comp4471.train import train_loop
-from dataloader.loader import configure_data
+from comp4471.train import train_loop, validate_epoch
+from dataloader.loader import configure_data, configure_data_test
 import comp4471.model
 import comp4471.ckpt
 import comp4471.util
@@ -36,15 +36,15 @@ def main_worker(worker_id, world_size, gpus, cfg):
         if is_distributed:
             print('initializing distributed group')
             dist.init_process_group(backend='nccl', init_method=cfg['distributed']['server']['url'], world_size=world_size, rank=worker_id)
-            print('initialized distributed group')
+            print(f'initialized distributed group, with world size = {dist.get_world_size()}')
         torch.cuda.device(device)
 
-    if is_distributed:
+    if is_distributed and worker_id is not None:
         if worker_id == 0:
             comp4471.model.get_pretrained()
             print('multi-process unsafe operations finished')
         print(f'worker {worker_id} before barrier')
-        torch.distributed.barrier()
+        torch.distributed.barrier(device_ids=[worker_id])
         print(f'worker {worker_id} after barrier')
     else:
         comp4471.model.get_pretrained()
@@ -57,32 +57,34 @@ def main_worker(worker_id, world_size, gpus, cfg):
     # Configure data
     root_path = os.path.dirname(__file__)
     loader_train, loader_val = configure_data(cfg)
+    loader_test = configure_data_test(cfg)
     print('data configuration finish')
 
     # Load model
     model = comp4471.model.ASRID(batch_size=batch_size, strategy=cfg["strategy"]).to(device)
     if is_distributed:
         optimizer = ZeRO(params=[
-            {'params': model.efficientNet.parameters()},
-            {'params': model.multiattn_block.parameters()},
-            {'params': model.static_block.parameters()}
+            {'params': model.parameters()},
         ], lr=lr, weight_decay=weight_delay, optimizer_class=torch.optim.AdamW)
         # https://pytorch.org/docs/stable/distributed.optim.html#torch.distributed.optim.ZeroRedundancyOptimizer
     else:
         optimizer = torch.optim.AdamW(params=[
-            {'params': model.efficientNet.parameters()},
-            {'params': model.multiattn_block.parameters()},
-            {'params': model.static_block.parameters()}
+            {'params': model.parameters()},
         ], lr=lr, weight_decay=weight_delay)
 
     if is_distributed:
-        model = nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=device, find_unused_parameters=True)
+        model = nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=device, find_unused_parameters=False)
     print('model definition finish')
 
     # State
     state = comp4471.ckpt.State(model=model, optimizer=optimizer, ckpt_path=cfg['experiment']['ckpt_path'])
     torch_device = torch.device("cpu") if worker_id is None else torch.device('cuda', device)
-    state.load(torch_device)
+    test_only = False
+    try:
+        test_only = cfg['schedule']['test_only']
+        print('test mode')
+    except: pass
+    state.load(torch_device, load_optim=not test_only)
     print('state restore finish')
 
     # Writer
@@ -109,12 +111,31 @@ def main_worker(worker_id, world_size, gpus, cfg):
         writer = None
     print('writer ready')
 
-    train_loop(state, central_gpu=gpus[0] if worker_id!=None else device,
-        model=model, device=device, writer=writer,
-        loader_train=loader_train, loader_val=loader_val,
-        optimizer=optimizer,
-        loss_func=loss.twoPhaseLoss(phase=1).to(device), eval_func=loss.evalLoss().to(device),
-        cfg=cfg)
+    loss_func = loss.twoPhaseLoss(phase=1).to(device)
+    eval_func = loss.evalLoss().to(device)
+    if test_only is True:
+        name = cfg['experiment']['exp_fullname']
+        print(name)
+        loss1, (recall1, acc1) = validate_epoch(model=model, device=device, data_loader=loader_train, verbose=cfg['schedule']['verbose'], eval_func=eval_func)
+        loss2, (recall2, acc2) = validate_epoch(model=model, device=device, data_loader=loader_val, verbose=cfg['schedule']['verbose'], eval_func=eval_func)
+        loss3, (recall3, acc3) = validate_epoch(model=model, device=device, data_loader=loader_test, verbose=cfg['schedule']['verbose'], eval_func=eval_func)
+        metric = torch.Tensor([[loss1, recall1, acc1], [loss2, recall2, acc2], [loss3, recall3, acc3]]).to(device)
+        if worker_id > 0:
+            dist.send(tensor=metric, dst=0)
+        else:
+            for i in range(1, world_size):
+                tensor = torch.zeros_like(metric).to(device)
+                dist.recv(tensor=tensor, src=i)
+                metric += tensor
+            metric /= world_size
+            print(f'{name}: {metric}')
+    else:
+        train_loop(state, central_gpu=gpus[0] if worker_id!=None else device,
+            model=model, device=device, writer=writer,
+            loader_train=loader_train, loader_val=loader_val,
+            optimizer=optimizer,
+            loss_func=loss_func, eval_func=eval_func,
+            cfg=cfg)
 
     # clean up
     # torch.cuda.empty_cache()
@@ -125,7 +146,7 @@ def main_worker(worker_id, world_size, gpus, cfg):
 def main(cfg: OmegaConf):
     # https://omegaconf.readthedocs.io/en/2.2_branch/usage.html
     try:
-        cfg = OmegaConf.merge(cfg, OmegaConf.load(cfg.conf_file)) # merge with config file content
+        cfg = OmegaConf.merge(OmegaConf.load(cfg.conf_file), cfg) # merge with config file content
     except:
         pass
 
@@ -138,7 +159,7 @@ def main(cfg: OmegaConf):
 
     if torch.cuda.is_available() is False:
         print('No GPU found, use CPU instead')
-        main_worker(None, None, None, config)
+        main_worker(None, None, None, cfg)
         return
 
     # find GPUs

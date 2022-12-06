@@ -6,8 +6,7 @@ from .augment import create_transforms_train, create_transforms_val
 # https://pytorch.org/docs/stable/data.html
 def configure_data(cfg):
     # Transforms (augmentation, converting img to tensor, etc.)
-    #trans_train = create_transforms_train(cfg['dataset']['size'])
-    trans_train = create_transforms_val(cfg['dataset']['size']) # temporally
+    trans_train = create_transforms_train(cfg['dataset']['size'])
     trans_val = create_transforms_val(cfg['dataset']['size'])
 
     # Map-style dataset
@@ -44,3 +43,17 @@ def configure_data(cfg):
                             num_workers=cfg['dataset']['load_workers'],
                             )
     return loader_train, loader_val
+
+def configure_data_test(cfg):
+    trans_test = create_transforms_val(cfg['dataset']['size'])
+    data_test = DfdcDataset('test', cfg['dataset']['folds_json_path'],
+                            root_dir=cfg['dataset']['root_dir'],
+                            crops_dir=cfg['dataset']['crops_dir'],
+                            trans=trans_test,
+                            small_fit=cfg['dataset']['small_fit'])
+    return DataLoader(data_test,
+                    batch_size=cfg['optimizer']['batch_size'],
+                    shuffle=True,
+                    pin_memory=False,
+                    num_workers=cfg['dataset']['load_workers'],
+                    )

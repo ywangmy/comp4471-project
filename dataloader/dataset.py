@@ -41,6 +41,7 @@ class DfdcDataset(Dataset):
                 self.data = self.data[:30]
 
     def __getitem__(self, index: int):
+        # print(f'__getitem__({index})')
         while True:
             video_name, label, ori, frames = self.data[index]
             path_common = os.path.join(self.root_dir, self.crops_dir, video_name)
