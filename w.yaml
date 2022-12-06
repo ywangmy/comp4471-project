@@ -1,21 +1,21 @@
 experiment:
-  exp_name: dynamic_095_largerData
-  exp_comment: Wdecay_LR3_Plateau_L
+  exp_name: static_plain_aug_smallFit
+  exp_comment: Wdecay_LR6_Exponential
   exp_fullname: ${.exp_name}_${.exp_comment}
   ckpt_path: ./exps/${.exp_name}/${.exp_comment}/ckpt.pth.tar # load from *.best, save to *
   board_dir: ./exps/${.exp_name}/${.exp_comment}
 
 strategy: static_new
-# static_old, static_new, dynamic_baseline
+# static_old, static_new, static_mix, dynamic_mix
 
 optimizer:
   batch_size: 6
   weight_decay: 5e-3
-  lr: 1e-3  # for OneCycle and Cosine, this is the max_lr
+  lr: 1e-6  # for OneCycle and Cosine, this is the max_lr
 
 schedule:
   num_epoch: 100
-  schedule_policy: Plateau # Cosine, Plateau, OneCycle, Exponential
+  schedule_policy: Exponential # Cosine, Plateau, OneCycle, Exponential
   verbose: True
   val_freq: 1
 
@@ -28,7 +28,7 @@ distributed:
     url: 'tcp://${.host}:${.port}'
 
 dataset:
-  small_fit: 0 # 1 for True, 0 for False
+  small_fit: 1 # 1 for True, 0 for False
   size: 380 # transformation
   folds_json_path: folds.json
   root_dir: data/

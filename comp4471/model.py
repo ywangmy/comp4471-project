@@ -150,15 +150,24 @@ class ASRID(nn.Module):
         self.efficientNet = get_pretrained(self.num_features)
         self.multiattn_block = SelfAttention(self.batch_size, self.num_frames, self.num_features, self.num_heads, self.dim_attn)
 
+        self.strategy = strategy
         if strategy == 'static_old':
-            self.static_block = staticClassifier_old(in_channels=self.dim_attn + self.num_features)
+            self.static_block = staticClassifier_old(in_channels=self.dim_attn)
+            self.w_static = 1.
         elif strategy == 'static_new':
+            self.static_block = staticClassifier(in_channels=self.dim_attn)
+            self.w_static = 1.
+        elif strategy == 'static_mix':
             self.static_block = staticClassifier(in_channels=self.dim_attn + self.num_features)
-        self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn + self.num_features) # baseline
-
-        # Other parameters
-        # self.w_static = torch.rand((1,))
-        self.w_static = 0.95
+            self.w_static = 1.
+        elif strategy == 'dynamic':
+            self.static_block = staticClassifier(in_channels=self.dim_attn)
+            self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn) # baseline
+            self.w_static = 0.8
+        elif strategy == 'dynamic_mix':
+            self.static_block = staticClassifier(in_channels=self.dim_attn + self.num_features)
+            self.dynamic_block = dynamicClassifier(in_channels=self.dim_attn + self.num_features) # baseline
+            self.w_static = 0.8
 
     def forward(self, x):
         """
@@ -171,7 +180,6 @@ class ASRID(nn.Module):
         N, F, C, H, W = x.size()
         #print(f'x.size()={x.size()}, type={x.type()}')
         #x_imgs = torch.reshape(x, (-1, C, H, W))
-        #print(f'main forwarding: alloc {torch.cuda.memory_allocated() / 1024**2}, maxalloc {torch.cuda.max_memory_allocated()  / 1024**2}, reserved {torch.cuda.memory_reserved() / 1024**2}')
 
         # Feature output (N, F, num_features)
         feat_output = torch.stack([self.efficientNet(img) for img in x])
@@ -184,20 +192,26 @@ class ASRID(nn.Module):
         attn_output_weights = torch.stack([output_weight for _, output_weight in attn_results])
         #print(f'attn_output.size()={attn_output.size()}')
 
-        # Mixed output (N, F, dim_attn + num_features)
-        mixed_output = torch.cat((feat_output, attn_output), dim=2)
-        mixed_output = torch.sign(mixed_output) * torch.sqrt(torch.abs(mixed_output) + 1e-12)
-        mixed_output = F.normalize(mixed_output, dim=-1)
+        strategy = self.strategy
+        if strategy == 'static_old' or strategy == 'static_new' or strategy == 'dynamic':
+            mixed_output = attn_output
+        elif strategy == 'static_mix' or strategy == 'dynamic_mix':
+            # Mixed output (N, F, dim_attn + num_features)
+            mixed_output = torch.cat((feat_output, attn_output), dim=2)
+            #mixed_output = torch.sign(mixed_output) * torch.sqrt(torch.abs(mixed_output) + 1e-12)
+            mixed_output = torch.nn.functional.normalize(mixed_output, dim=2)
 
         # Static scores (N, F)
-        # score_static_s = torch.stack([self.static_block(attn) for attn in attn_output])
         score_static_s = self.static_block(mixed_output)
 
         # Mean static scores (N,)
         score_static = score_static_s.mean(dim=1)
 
         # Dynamic scores (N,)
-        score_dynamic = self.dynamic_block(mixed_output)
+        if strategy == 'static_old' or strategy == 'static_new' or strategy == 'static_mix':
+            score_dynamic = 0
+        elif strategy == 'dynamic_mix' or strategy == 'dynamic':
+            score_dynamic = self.dynamic_block(mixed_output)
 
         score = self.w_static * score_static + (1. - self.w_static) * score_dynamic
-        return score, (attn_output, score_static, score_static) # TODO: change into dynamic
+        return score, (attn_output, score_static, score_dynamic)

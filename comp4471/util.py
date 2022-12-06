@@ -4,15 +4,13 @@ import numpy as np
 
 import torch
 
-# Pearson hashing
 def hash8(message: str, table = list(range(0, 256)) ) -> int:
     """Pearson hashing."""
     hash = len(message) % 256
     for i in message:
         hash = table[hash ^ ord(i)]
     return hash
-def setup_seed(string):
-    seed = hash8(string)
+def setup_seed(seed):
     np.random.seed(seed)
     random.seed(seed)
     torch.manual_seed(seed)

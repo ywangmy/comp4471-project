@@ -16,50 +16,32 @@ class DfdcDataset(Dataset):
 
     def __init__(self,
                  mode,
+                 folds_json_path,
                  root_dir="data/",
                  crops_dir='crops',
-                 fold=0,
-                 folds_csv_path=None,
-                 folds_json_path=None,
                  trans=None,
-                 small_fit=False):
+                 small_fit=0):
         super().__init__
         self.root_dir = root_dir
         self.crops_dir = crops_dir
-        self.fold = fold
-        assert folds_csv_path != None or folds_json_path != None, \
-            'folds_csv_path and folds_json_path cannot be both None'
-        self.folds_json_path = folds_json_path
-        self.folds_csv_path = folds_csv_path
-        #if folds_json_path is not None:
-        with open(folds_json_path) as openfile:
-            self.folds_json = json.load(openfile)
-        #else:
-        #    self.folds_csv = pd.read_csv(self.folds_csv_path)
         self.mode = mode
         self.trans = trans
         self.trans_totensor = create_transforms_totensor()
-        self.epoch=0
-        self.small_fit = True if small_fit == 1 else False
-        self.next_epoch()
 
-    def next_epoch(self): # only once in init
-        """
-        Called at initialization
-        """
+        with open(folds_json_path) as openfile:
+            self.folds_json = json.load(openfile)
         self.data = self.folds_json[self.mode]
-        if self.small_fit:
+        np.random.shuffle(self.data)
+        if small_fit == 1:
             if self.mode == 'train':
-                self.data = self.data[:128]
+                self.data = self.data[:600]
             elif self.mode == 'val':
-                self.data = self.data[:32]
+                self.data = self.data[:30]
             elif self.mode == 'test':
-                self.data = self.data[:32]
-        self.epoch += 1
+                self.data = self.data[:30]
 
     def __getitem__(self, index: int):
         while True:
-            # video_name, frame_name, label, ori_video, frame, fold = self.data[index]
             video_name, label, ori, frames = self.data[index]
             path_common = os.path.join(self.root_dir, self.crops_dir, video_name)
             try:

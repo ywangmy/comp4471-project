@@ -1,40 +1,36 @@
 experiment:
-  exp_name: static
-  exp_id: 0
-  ckpt_path: ./exps/${.exp_name}/ckpt${.exp_id}.pth.tar
-  board_dir: ./exps/${.exp_name}/ckpt${.exp_id}
-  seed: 4471
+  exp_name: static_new
+  exp_comment: Wdecay53_LR8_OneCycle_L
+  exp_fullname: ${.exp_name}_${.exp_comment}
+  ckpt_path: ./exps/${.exp_name}/${.exp_comment}/ckpt.pth.tar # load from *.best, save to *
+  board_dir: ./exps/${.exp_name}/${.exp_comment}
 
-strategy: new
+strategy: static_new
+# static_old, static_new, static_mix, dynamic_mix
 
 optimizer:
   batch_size: 6
-  weight_decay: 0.001
-  lr: 1e-6
+  weight_decay: 5e-3
+  lr: 1e-8  # for OneCycle and Cosine, this is the max_lr
 
 schedule:
-  num_epoch: 100
+  num_epoch: 10
   schedule_policy: OneCycle # Cosine, Plateau, OneCycle, Exponential
-  max_lr: 1e-5 # for OneCycle only
   verbose: True
   val_freq: 1
-  phase: 1
 
 distributed:
-  toggle: True
-  gpu_workers: 4 # spawn mode only
+  toggle: False
   server:
     host: localhost
-    port: 4471
+    port: 3471 # change this if has conflict
     url: 'tcp://${.host}:${.port}'
 
 dataset:
-  small_fit: 1 # 1 for True, 0 for False
-  size: 380
-  fold: 0
-  folds_csv_path: folds.csv
+  small_fit: 0 # 1 for True, 0 for False
+  size: 380 # transformation
   folds_json_path: folds.json
   root_dir: data/
   crops_dir: crops
   output_dir: weights/
-  load_workers: 1
+  load_workers: 0 # multi-process data loading

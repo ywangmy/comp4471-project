@@ -36,13 +36,15 @@ def train_epoch(model, device, data_loader,
         y = sample["label"].float().to(device, non_blocking=True) # y should be float()
         # video_name = sample['video_name']
         # ori_name = sample['ori']
-        # writer.add_images('X', X.transpose(1,2), global_step=start_iter+iter, dataformats='CHW')
-        # writer.flush()
 
         score, _ = model(X)
         loss = loss_func(score.view(-1, 1), y)
 
         if writer is not None:
+            # take a look at image
+            writer.add_images('X', X[0][0], global_step=start_iter+iter, dataformats='CHW')
+            writer.flush()
+
             writer.add_scalar(f'His/loss', loss, start_iter+iter)
             for i, param_group in enumerate(optimizer.param_groups):
                 writer.add_scalar(f'Lr/lr', param_group['lr'], start_iter+iter)

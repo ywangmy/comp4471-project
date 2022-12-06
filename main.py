@@ -27,16 +27,17 @@ import comp4471.util
 
 def main_worker(worker_id, world_size, gpus, cfg):
     is_distributed = cfg['distributed']['toggle']
+    print(f'worker {worker_id} waking up with distributed {is_distributed}')
     if worker_id is None:
         device = torch.device("cpu")
     else:
         device = gpus[worker_id]
-        print(f'worker {worker_id}/{world_size} are using GPU {device}/{len(gpus)}')
+        print(f'worker {worker_id}/{world_size} are using GPU {device}/{len(gpus)} (relative)')
         if is_distributed:
+            print('initializing distributed group')
             dist.init_process_group(backend='nccl', init_method=cfg['distributed']['server']['url'], world_size=world_size, rank=worker_id)
-
+            print('initialized distributed group')
         torch.cuda.device(device)
-        torch.cuda.empty_cache()
 
     if is_distributed:
         if worker_id == 0:
@@ -75,7 +76,7 @@ def main_worker(worker_id, world_size, gpus, cfg):
         ], lr=lr, weight_decay=weight_delay)
 
     if is_distributed:
-        model = nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=device, find_unused_parameters=False)
+        model = nn.parallel.DistributedDataParallel(model, device_ids=[device], output_device=device, find_unused_parameters=True)
     print('model definition finish')
 
     # State
@@ -127,9 +128,13 @@ def main(cfg: OmegaConf):
         cfg = OmegaConf.merge(cfg, OmegaConf.load(cfg.conf_file)) # merge with config file content
     except:
         pass
+
     OmegaConf.resolve(cfg)
     OmegaConf.set_readonly(cfg, True)
-    comp4471.util.setup_seed(OmegaConf.to_yaml(cfg))
+    cfg_seed = OmegaConf.masked_copy(cfg, ["strategy", "optimizer", "schedule","dataset"])
+    seed = comp4471.util.hash8(OmegaConf.to_yaml(cfg_seed))
+    comp4471.util.setup_seed(seed)
+    print(f'using seed {seed} by hashing config yaml')
 
     if torch.cuda.is_available() is False:
         print('No GPU found, use CPU instead')
@@ -139,6 +144,7 @@ def main(cfg: OmegaConf):
     # find GPUs
     ngpus_per_node = torch.cuda.device_count()
     gpus = range(0, ngpus_per_node)
+    print(f'{ngpus_per_node} GPUs found')
 
     if cfg['distributed']['toggle']:
         assert dist.is_available() and dist.is_nccl_available()
@@ -148,6 +154,7 @@ def main(cfg: OmegaConf):
             torch_run = True
         except:
             torch_run = False
+        print(f'running in torch run = {torch_run}')
 
         if torch_run:
             # option 1: use torch run (better)

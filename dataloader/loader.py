@@ -6,24 +6,19 @@ from .augment import create_transforms_train, create_transforms_val
 # https://pytorch.org/docs/stable/data.html
 def configure_data(cfg):
     # Transforms (augmentation, converting img to tensor, etc.)
-    trans_train = create_transforms_train(cfg['dataset']['size'])
+    #trans_train = create_transforms_train(cfg['dataset']['size'])
+    trans_train = create_transforms_val(cfg['dataset']['size']) # temporally
     trans_val = create_transforms_val(cfg['dataset']['size'])
 
     # Map-style dataset
-    data_train = DfdcDataset(mode='train',
+    data_train = DfdcDataset('train', cfg['dataset']['folds_json_path'],
                             root_dir=cfg['dataset']['root_dir'],
                             crops_dir=cfg['dataset']['crops_dir'],
-                            fold=cfg['dataset']['fold'],
-                            folds_csv_path=cfg['dataset']['folds_csv_path'],
-                            folds_json_path=cfg['dataset']['folds_json_path'],
                             trans=trans_train,
                             small_fit=cfg['dataset']['small_fit'])
-    data_val = DfdcDataset(mode='val',
+    data_val = DfdcDataset('val', cfg['dataset']['folds_json_path'],
                         root_dir=cfg['dataset']['root_dir'],
                         crops_dir=cfg['dataset']['crops_dir'],
-                        fold=cfg['dataset']['fold'],
-                        folds_csv_path=cfg['dataset']['folds_csv_path'],
-                        folds_json_path=cfg['dataset']['folds_json_path'],
                         trans=trans_val,
                         small_fit=cfg['dataset']['small_fit'])
 

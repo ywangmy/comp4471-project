@@ -3,6 +3,7 @@ Group project of COMP4471@HKUST in 2022 Fall.
 
 # Training
 In the root directory of project.
+Notice that, the random seed is based on the configuration file content, to ensure reproducability and also prevent overfit.
 
 ## Single processing mode:
 Turn off the distributed.toggle in conf.yaml
@@ -16,11 +17,11 @@ FYI: batch size of 6 needs 10GB GPU memory
 
 1. torchrun
     ```bash
-    CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nnodes=1 --nproc_per_node=4 main.py conf_file=conf.yaml
+    CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --standalone --nnodes=1 --nproc_per_node=4 main.py conf_file=conf.yaml distributed.toggle=True
     ```
 2. or torch multiprocessing spawn (not recommended because of termination messy)
     ```bash
-    CUDA_VISIBLE_DEVICES=1,3 python main.py conf_file=conf.yaml
+    CUDA_VISIBLE_DEVICES=0,1,3 python main.py conf_file=conf.yaml distributed.toggle=True distributed.gpu_workers=3
     ```
 
 For other arguments:
